@@ -10,6 +10,9 @@ The tsconfig.json was initially generated with `tsc --init` and then subsequentl
 - The Javascript output files are written to the `dist` directory
 - TODO
 
+
+Compile with `tsc -p tsconfig.json`
+
 ## Learning sources
 
 [How to integrate Promises in ts](https://stackoverflow.com/questions/27573365/how-to-use-typescript-with-native-es6-promises#27573589)
