@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "@types/es6-promise": "^3.3.0"
+  },
+  "devDependencies": {
+    "ava": "^2.4.0"
   }
 }
