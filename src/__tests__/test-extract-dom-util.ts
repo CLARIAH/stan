@@ -2,12 +2,6 @@ import DOMUtil from "../util/extract-dom-util";
 import jsdom from "jsdom";
 const { JSDOM } = jsdom;
 
-const fn = () => 'foo';
-
-test('fn() returns foo', () => {
-    expect(fn()).toBe("foo");
-});
-
 const getBaseDOM = () => {
     const htmlSource = "<html><body><div>hoi</div><br/></body><html>";
     const dom = new JSDOM(htmlSource, { pretendToBeVisual: true });
@@ -97,6 +91,20 @@ test("getCommonAncestor of div 1 and div 1 returns div 1:", () => {
     let div1 = dom.window.document.getElementsByTagName("div")[0];
     let ancestor = DOMUtil.getCommonAncestor(div1, div1);
     expect(ancestor).toBe(div1);
+});
+
+test("getCommonAncestor of div 1 and document returns null:", () => {
+    let dom = getComplexDOM();
+    let div1 = dom.window.document.getElementsByTagName("div")[0];
+    let ancestor = DOMUtil.getCommonAncestor(div1, dom.window.document);
+    expect(ancestor).toBe(null);
+});
+
+test("getCommonAncestor of document and div 1 returns null:", () => {
+    let dom = getComplexDOM();
+    let div1 = dom.window.document.getElementsByTagName("div")[0];
+    let ancestor = DOMUtil.getCommonAncestor(dom.window.document, div1);
+    expect(ancestor).toBe(null);
 });
 
 

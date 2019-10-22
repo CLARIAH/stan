@@ -77,11 +77,14 @@ const DOMUtil = {
     },
 
     getCommonAncestor : (startNode: Node, endNode: Node) => {
+        if (endNode.nodeType === Node.DOCUMENT_NODE) {
+            return null;
+        }
         if (endNode.contains(startNode)) {
             return endNode;
         }
         let currNode = startNode;
-        while (currNode) {
+        while (currNode && currNode.nodeType !== Node.DOCUMENT_NODE) {
             if (currNode.contains(endNode)) {
                 return currNode;
             }
