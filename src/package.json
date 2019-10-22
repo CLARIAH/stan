@@ -3,20 +3,23 @@
     "@types/es6-promise": "^3.3.0"
   },
   "scripts": {
-    "test": "ava"
+    "test": "jest --coverage"
   },
-  "ava": {
-    "compileEnhancements": false,
-    "extensions": [
-      "es"
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
     ],
-    "require": [
-      "ts-node/register"
-    ]
+    "preset": "ts-jest",
+    "testRegex": "/src/__tests__/.*\\.(ts|tsx|js)$"
   },
   "devDependencies": {
-    "ava": "^2.4.0",
-    "ts-node": "^8.4.1",
-    "typescript": "^3.6.3"
+    "@types/jest": "^24.0.19",
+    "@types/jsdom": "^12.2.4",
+    "jest": "^24.9.0",
+    "jsdom": "^15.2.0",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.6.4"
   }
 }
