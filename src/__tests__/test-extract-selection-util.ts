@@ -1,5 +1,5 @@
 import SelectionUtil from "../util/extract-selection-util";
-import MouseSelection from "../model/MouseSelection";
+//import MouseSelection from "../model/SelectionMouse";
 import jsdom from "jsdom";
 const { JSDOM } = jsdom;
 
@@ -99,7 +99,7 @@ test("findNodeOffsetInContainer of last text node in div returns correct offset"
 
 test("makeTextSelection throws an error if start and end nodes don't share a container node", () => {
     const domNodes = getDOMNodes();
-    const mouseSelection = new MouseSelection(domNodes.dom.window.document, 0, domNodes.p1, 0);
+    const mouseSelection = selectionUtil.makeMouseSelection(domNodes.dom.window.document, 0, domNodes.p1, 0);
     let error = null;
     try {
         selectionUtil.makeTextSelection(mouseSelection);
@@ -111,7 +111,7 @@ test("makeTextSelection throws an error if start and end nodes don't share a con
 
 test("makeTextSelection returns TextSelection if mouse selection has a valid containerNode", () => {
     const domNodes = getDOMNodes();
-    const mouseSelection = new MouseSelection(domNodes.p1, 0, domNodes.p1, 10);
+    const mouseSelection = selectionUtil.makeMouseSelection(domNodes.p1, 0, domNodes.p1, 10);
     const textSelection = selectionUtil.makeTextSelection(mouseSelection);
     expect(textSelection.containerNode).not.toBe(null);
 });

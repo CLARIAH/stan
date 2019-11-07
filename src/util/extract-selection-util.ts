@@ -1,11 +1,24 @@
-
-"use strict";
-
 import DOMUtil from "./extract-dom-util";
-import MouseSelection from "../model/MouseSelection";
-import TextSelection from "../model/TextSelection";
 
 const domUtil = new DOMUtil();
+
+interface MouseSelection {
+    startNode: Node,
+    startOffset: number,
+    endNode: Node,
+    endOffset: number
+}
+
+interface TextSelection {
+    startNode: Node;
+    startOffset: number;
+    endNode: Node;
+    endOffset: number;
+    containerNode: Node;
+    containerStartOffset: number;
+    containerEndOffset: number;
+}
+
 
 export default class SelectionUtil {
 
@@ -14,11 +27,22 @@ export default class SelectionUtil {
         if (!selection || selection.isCollapsed || !selection.focusNode || !selection.anchorNode) {
             return null;
         } else if (this.backwardsSelection(selection)) {
-            return new MouseSelection(selection.focusNode, selection.focusOffset, selection.anchorNode, selection.anchorOffset);
+            return this.makeMouseSelection(selection.focusNode, selection.focusOffset, selection.anchorNode, selection.anchorOffset);
         }  else {
-            return new MouseSelection(selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset);
+            return this.makeMouseSelection(selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset);
         }
     }
+
+    makeMouseSelection (startNode: Node, startOffset: number, endNode: Node, endOffset: number) {
+        let mouseSelection: MouseSelection  = {
+                startNode: startNode, 
+                startOffset: startOffset, 
+                endNode: endNode, 
+                endOffset: endOffset
+            };
+        return mouseSelection;
+    }
+
 
     backwardsSelection (selection: Selection | null) {
         if (!selection || !selection.anchorNode || !selection.focusNode) {
@@ -37,7 +61,16 @@ export default class SelectionUtil {
         }
         const containerStartOffset = this.findNodeOffsetInContainer(selection.startNode, containerNode);
         const containerEndOffset = this.findNodeOffsetInContainer(selection.endNode, containerNode);
-        return new TextSelection(selection.startNode, selection.startOffset, selection.endNode, selection.endOffset, containerNode, containerStartOffset, containerEndOffset);
+        const textSelection: TextSelection = {
+            startNode: selection.startNode, 
+            startOffset: selection.startOffset, 
+            endNode: selection.endNode, 
+            endOffset: selection.endOffset, 
+            containerNode: containerNode, 
+            containerStartOffset: containerStartOffset, 
+            containerEndOffset: containerEndOffset
+        };
+        return textSelection;
     }
 
     preceeds (node1: Node, node2: Node) {

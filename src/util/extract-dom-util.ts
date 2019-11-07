@@ -1,10 +1,11 @@
+import StringUtil from './extract-string-util';
 
-"use strict";
+const stringUtil = new StringUtil();
 
 export default class DOMUtil {
 
     getTextNodes (node: Node) {
-        let textNodes : Array<Node> = [];
+        const textNodes : Array<Node> = [];
         if (node.nodeType === window.Node.TEXT_NODE) {
             textNodes.push(node);
             return textNodes;
@@ -13,8 +14,9 @@ export default class DOMUtil {
             if (childNode.nodeType === window.Node.TEXT_NODE) {
                 textNodes.push(childNode);
             } else if (childNode.nodeType === window.Node.ELEMENT_NODE) {
-                let childTextNodes = this.getTextNodes(childNode);
-                textNodes = textNodes.concat(childTextNodes);
+                this.getTextNodes(childNode).forEach(cihldTextNode => {
+                    textNodes.push(cihldTextNode);
+                });
             }
         });
         return textNodes;
@@ -52,6 +54,30 @@ export default class DOMUtil {
     }
 
     getDisplayType (node: HTMLElement) { window.getComputedStyle(node, "").display }
+
+    getTextNodeDisplayOffset (targetTextNode: Node, containerNode: HTMLElement) {
+        let offset = 0;
+        let done = false;
+        const textNodes = this.getTextNodes(containerNode);
+        let containerText = containerNode.innerText;
+        const textNodeIndex = textNodes.indexOf(targetTextNode);
+        if (textNodeIndex === -1) throw Error("textNode is not contained by containerNode");
+        textNodes.forEach(textNode => {
+            let textNodeText: string = "";
+            if (textNode === targetTextNode) {
+                done = true;
+            } else if (!done && textNode.textContent) {
+                textNodeText = textNode.textContent.trim();
+            }
+            if (!done) {
+                const textIndex = containerText.indexOf(textNodeText);
+                offset += textIndex + textNodeText.length;
+                containerText = containerText.substr(textIndex + textNodeText.length);
+            }
+        });
+        return offset;
+
+    }
 
     filterTextNodes (nodes: Array<Node>) {
         return nodes.filter((node) => { return node.nodeType === window.Node.TEXT_NODE});

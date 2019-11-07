@@ -9,6 +9,19 @@ const generateBaseDOM = () => {
     return dom;
 }
 
+const generateDisplayOffsetDOM = () => {
+    const htmlSource = `<html><body>\n  <p>some text <i>with italics</i> and some <i> variation </i> in use of <i>whitespace </i>. </p>  \n</body></html>`;
+    const dom = new JSDOM(htmlSource, { pretendToBeVisual: true });
+    Object.defineProperty(dom.window.Element.prototype, 'innerText', {
+        get() {
+          return this.textContent; // make sure innerText is implemented;
+          // modified from https://github.com/jsdom/jsdom/issues/1245
+        },
+        configurable: true, // make it so that it doesn't blow chunks on re-running tests with things like --watch
+      });
+    return dom;
+}
+
 const generateComplexDOM = () => {
     const htmlSource = `<html><body>
         <div id="text1" class="text">
@@ -46,13 +59,73 @@ test("getTextNodes returns empty list for br", () => {
     expect(textNodes.length).toBe(0);
 });
 
+test("getTextNodeDisplayOffset returns 0 for first text node", () => {
+    const dom = generateDisplayOffsetDOM();
+    const body = dom.window.document.body;
+    const bodyText1 = body.childNodes[0];
+    const offset = domUtil.getTextNodeDisplayOffset(bodyText1, body);
+    expect(offset).toBe(0);
+});
+
+test("getTextNodeDisplayOffset returns 64 for last text node", () => {
+    const dom = generateDisplayOffsetDOM();
+    const body = dom.window.document.body;
+    const bodyText2 = body.childNodes[2];
+    const offset = domUtil.getTextNodeDisplayOffset(bodyText2, body);
+    expect(offset).toBe(69);
+});
+
+/*
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.divText2, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(64);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.pText1, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(0);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.pText2, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(22);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.pText3, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(42);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.i1Text, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(10);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.i2Text, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(32);
+});
+
+test("getTextNodeDisplayOffset", () => {
+    const info = generateDisplayNodesInfo();
+    const offset = domUtil.getTextNodeDisplayOffset(info.nodes.i3Text, info.divTextNodesDisplayInfo);
+    expect(offset).toBe(52);
+});
+*/
+
 test("filterTextNodes returns single text node", () => {
     let dom = generateBaseDOM();
     let div = dom.window.document.getElementsByTagName("div")[0];
     let textNode = div.childNodes[0];
     let nodes : Array<Node> = [div, textNode]
     expect(domUtil.filterTextNodes(nodes)[0]).toBe(textNode);
-})
+});
 
 test("filterTextNodes returns empty list", () => {
     let dom = generateBaseDOM();
