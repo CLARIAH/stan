@@ -1,14 +1,22 @@
 import VocabularyRegistry from "../model/VocabularyRegistry";
-import DomUtil from "./extract-dom-util";
 import DOMUtil from "./extract-dom-util";
+import Resource from "../model/Resource";
+import StringUtil from "./extract-string-util";
 
+const stringUtil = new StringUtil();
+const domUtil = new DOMUtil();
 
-
-interface PrefixDict {
+export interface PrefixDict {
     [prefixString: string]: string;
 }
 
-interface RDFaProperties {
+export interface Context {
+    parentResource: string | null;
+    prefixDict: PrefixDict;
+    vocabulary: string | null;
+}
+
+export interface RDFaProperties {
     about: string | null;
     resource: string | null;
     vocab: string | null;
@@ -72,42 +80,181 @@ export default class RDFaUtil {
         })
     }
 
-    hasRDFaResource (element: HTMLElement) {
+    hasRDFaResourceAttribute (element: HTMLElement) {
         return element.hasAttribute(RDFaAttributeType.RESOURCE) || element.hasAttribute(RDFaAttributeType.ABOUT);
     }
 
-    hasRDFaType (element: HTMLElement) {
+    hasRDFaTypeAttribute (element: HTMLElement) {
         return element.hasAttribute(RDFaAttributeType.TYPEOF);
     }
 
-    hasRDFaPrefix (element: HTMLElement) {
+    hasRDFaPrefixAttribute (element: HTMLElement) {
         return element.hasAttribute(RDFaAttributeType.PREFIX);
     }
 
-    isIgnoreClass(rdfType: string, vocabularyRegistry: VocabularyRegistry) {
-        let ignore = false;
-        if (Array.isArray(rdfType)) {
-            rdfType.forEach(type => {
-                if (type === vocabularyRegistry.ignorableElementClass()) {
-                    ignore = true;
-                }
-            })
-        } else if (rdfType === vocabularyRegistry.ignorableElementClass()) {
-            ignore = true;
+    makeEmptyContext() {
+        const prefixDict: PrefixDict = {}
+        const context: Context = {
+            parentResource: null,
+            prefixDict: prefixDict,
+            vocabulary: null
+        };
+        return context;
+    }
+
+    setIgnoreElements(rootNode: Node, ignorableElementClass: string) {
+        const context = this.makeEmptyContext();
+        this.setIgnoreElementsRecursively(rootNode, ignorableElementClass, context);
+    }
+
+    setIgnoreElementsRecursively(node: Node, ignorableElementClass: string, context: Context) {
+        if (node.nodeType !== window.Node.ELEMENT_NODE) { return false }
+        const localContext = this.copyContext(node, context);
+        console.log("setIgnoreElementsRecursively - context:", context);
+        const rdfaAttrs = this.getRDFaAttributes(<HTMLElement>node);
+        if (rdfaAttrs.property && this.parsePropertyAttribute(rdfaAttrs.property, localContext) === ignorableElementClass) {
+            this.setIgnoreElement(<HTMLElement>node); // sets ignorable for all descendants
+        } else {
+            node.childNodes.forEach(childNode => {
+                this.setIgnoreElementsRecursively(childNode, ignorableElementClass, localContext);
+            });
         }
-        return ignore;
     }
 
-    setIgnoreElements(vocabularyRegistry: VocabularyRegistry) {
-        //DOMUtil.prototype.getDescendants()
-        //domU
-        //if (rdfaAttrs.typeof && this.isIgnoreClass(rdfaAttrs.typeof, vocabularyRegistry)) {
-        //}
+    setIgnoreElement(element: HTMLElement) {
+        element.style.webkitUserSelect = "none";
+        element.style.cursor = "not-allowed";
     }
 
-    setIgnoreElement(element: HTMLElement, vocabularyRegistry: VocabularyRegistry) {
-        const rdfaAttrs = this.getRDFaAttributes(element);
-        if (rdfaAttrs.typeof && this.isIgnoreClass(rdfaAttrs.typeof, vocabularyRegistry)) {
+    listRDFaResources(rdfaRootNode: Node) {
+        const prefixDict: PrefixDict = {};
+        let parentResource: string = '';
+        let vocabulary: string = '';
+        const context: Context = {
+            parentResource: parentResource,
+            prefixDict: prefixDict,
+            vocabulary: vocabulary
+        }
+        return this.registerRDFaResources(rdfaRootNode, context);
+    }
+
+    registerRDFaResources(node: Node, context: Context) {
+        const resources: Array<Resource> = [];
+        if (node.nodeType !== window.Node.ELEMENT_NODE) {
+            return resources;
+        } 
+        const localContext = this.copyContext(node, context);
+        if (this.hasRDFaResourceAttribute(<HTMLElement>node)) {
+            const resource = this.registerRDFaResource(node, localContext);
+            resources.push(resource);
+            localContext.parentResource = resource.id;
+        }
+        node.childNodes.forEach(childNode => {
+            if (childNode.nodeType !== window.Node.ELEMENT_NODE) return false;
+            this.registerRDFaResources(childNode, localContext).forEach(resource => {
+                resources.push(resource);
+            });
+        });
+        return resources;
+    }
+
+    copyContext(node: Node, context: Context) {
+        // copy parent context to current node context, so parent context doesn't change
+        const localPrefixDict: PrefixDict = {};
+        Object.keys(context.prefixDict).forEach(prefix => {
+            // copy registered prefixes
+            localPrefixDict[prefix] = context.prefixDict[prefix];
+        });
+        const rdfaAttrs = this.getRDFaAttributes(<HTMLElement>node);
+        if (rdfaAttrs.prefix) {
+            // if this node has prefixes, register them, overwritting existing prefixes if they overlap
+            const newPrefixDict = this.parsePrefixAttribute(rdfaAttrs.prefix);
+            Object.keys(newPrefixDict).forEach(prefix => {
+                localPrefixDict[prefix] = newPrefixDict[prefix];
+            });
+        }
+        const localContext: Context = {
+            parentResource: context.parentResource,
+            vocabulary: context.vocabulary,
+            prefixDict: localPrefixDict
+        };
+        if (rdfaAttrs.vocab) {
+            // if this node sets a new vocabulary, update the local context
+            localContext.vocabulary = rdfaAttrs.vocab;
+        }
+        return localContext;
+    }
+
+    registerRDFaResource(node: Node, context: Context) {
+        const rdfaAttrs = this.getRDFaAttributes(<HTMLElement>node);
+        const text = (node.textContent) ? node.textContent : "";
+        if (!rdfaAttrs.resource || !rdfaAttrs.typeof) {
+            throw Error("Cannot register resource without identifier or type");
+        }
+        const typeIRI = this.parseTypeAttribute(rdfaAttrs.typeof, context);
+        const propertyIRI = this.parsePropertyAttribute(rdfaAttrs.property, context);
+        const resource = new Resource(node, rdfaAttrs.resource, typeIRI, propertyIRI, context.parentResource, true, text);
+        return resource;
+    }
+
+    parseTypeAttribute(rdfaTypeString: string, context: Context) {
+        if (rdfaTypeString.includes(" ")) {
+            const rdfaTypeStrings = rdfaTypeString.split(" ");
+            return rdfaTypeStrings.map(rdfaTypeString => {
+                return this.makeTypeIRI(rdfaTypeString, context);
+            });
+        } else {
+            return this.makeTypeIRI(rdfaTypeString, context);
+        }
+    }
+
+    parsePropertyAttribute(rdfaPropertyString: string | null, context: Context) {
+        console.log("parsePropertyAttribute - prefixDict:", context.prefixDict);
+        if (!rdfaPropertyString) {return null }
+        return this.makeTypeIRI(rdfaPropertyString, context);
+    }
+
+    makeTypeIRI(rdfaType: string, context: Context) {
+        if (this.hasRDFaTypePrefix(rdfaType)) {
+            return this.makePrefixedTypeIRI(rdfaType, context);
+        } else if (stringUtil.isURL(rdfaType)) {
+            return rdfaType;
+        } else {
+            if (!context.vocabulary) {
+                throw Error("Cannot turn literal into IRI - no vocabulary specified:" + rdfaType);
+            }
+            return this.makeLiteralTypeIRI(rdfaType, context.vocabulary);
+        } 
+    }
+
+    isLiteral(rdfString: string) {
+        return rdfString.match(/:/) === null;
+    }
+
+    makeLiteralTypeIRI(rdfaType: string, vocabulary: string) {
+        if (vocabulary.endsWith("#")) {
+            return vocabulary + rdfaType;
+        } else if (vocabulary.endsWith("/")) {
+            return vocabulary + rdfaType;
+        } else {
+            return vocabulary + "#" + rdfaType;
+        }
+    }
+
+    hasRDFaTypePrefix(rdfaType: string) {
+        return rdfaType.match(/^\w+:\w/) !== null;
+    }
+
+    makePrefixedTypeIRI(rdfaType: string, context: Context) {
+        const prefix = rdfaType.replace(/:.*/, "");
+        const typeLiteral = rdfaType.replace(/^.*?:/, "");
+        if (!context.prefixDict[prefix]) {
+            throw Error("Unknown prefix in typeof string: " + rdfaType);
+        }
+        if (context.prefixDict[prefix].endsWith("#") || context.prefixDict[prefix].endsWith("/")) {
+            return context.prefixDict[prefix] + typeLiteral;
+        } else {
+            return context.prefixDict[prefix] + "#" + typeLiteral;
         }
     }
 }
