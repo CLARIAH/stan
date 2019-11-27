@@ -1,6 +1,6 @@
 import VocabularyRegistry from "../model/VocabularyRegistry";
 import DOMUtil from "./extract-dom-util";
-import Resource from "../model/Resource";
+import Resource, { ResourceRegistry } from "../model/Resource";
 import StringUtil from "./extract-string-util";
 
 const stringUtil = new StringUtil();
@@ -110,7 +110,6 @@ export default class RDFaUtil {
     setIgnoreElementsRecursively(node: Node, ignorableElementClass: string, context: Context) {
         if (node.nodeType !== window.Node.ELEMENT_NODE) { return false }
         const localContext = this.copyContext(node, context);
-        console.log("setIgnoreElementsRecursively - context:", context);
         const rdfaAttrs = this.getRDFaAttributes(<HTMLElement>node);
         if (rdfaAttrs.property && this.parsePropertyAttribute(rdfaAttrs.property, localContext) === ignorableElementClass) {
             this.setIgnoreElement(<HTMLElement>node); // sets ignorable for all descendants
@@ -126,7 +125,7 @@ export default class RDFaUtil {
         element.style.cursor = "not-allowed";
     }
 
-    listRDFaResources(rdfaRootNode: Node) {
+    registerRDFaResources(rdfaRootNode: Node) {
         const prefixDict: PrefixDict = {};
         let parentResource: string = '';
         let vocabulary: string = '';
@@ -135,23 +134,28 @@ export default class RDFaUtil {
             prefixDict: prefixDict,
             vocabulary: vocabulary
         }
-        return this.registerRDFaResources(rdfaRootNode, context);
+        const resourceList = this.parseRDFaResources(rdfaRootNode, context);
+        const resourceRegistry: ResourceRegistry = {};
+        resourceList.forEach(resource => {
+            resourceRegistry[resource.id] = resource;
+        });
+        return resourceRegistry;
     }
 
-    registerRDFaResources(node: Node, context: Context) {
+    parseRDFaResources(node: Node, context: Context) {
         const resources: Array<Resource> = [];
         if (node.nodeType !== window.Node.ELEMENT_NODE) {
             return resources;
         } 
         const localContext = this.copyContext(node, context);
         if (this.hasRDFaResourceAttribute(<HTMLElement>node)) {
-            const resource = this.registerRDFaResource(node, localContext);
+            const resource = this.parseRDFaResource(node, localContext);
             resources.push(resource);
             localContext.parentResource = resource.id;
         }
         node.childNodes.forEach(childNode => {
             if (childNode.nodeType !== window.Node.ELEMENT_NODE) return false;
-            this.registerRDFaResources(childNode, localContext).forEach(resource => {
+            this.parseRDFaResources(childNode, localContext).forEach(resource => {
                 resources.push(resource);
             });
         });
@@ -185,7 +189,7 @@ export default class RDFaUtil {
         return localContext;
     }
 
-    registerRDFaResource(node: Node, context: Context) {
+    parseRDFaResource(node: Node, context: Context) {
         const rdfaAttrs = this.getRDFaAttributes(<HTMLElement>node);
         const text = (node.textContent) ? node.textContent : "";
         if (!rdfaAttrs.resource || !rdfaAttrs.typeof) {
@@ -209,7 +213,6 @@ export default class RDFaUtil {
     }
 
     parsePropertyAttribute(rdfaPropertyString: string | null, context: Context) {
-        console.log("parsePropertyAttribute - prefixDict:", context.prefixDict);
         if (!rdfaPropertyString) {return null }
         return this.makeTypeIRI(rdfaPropertyString, context);
     }

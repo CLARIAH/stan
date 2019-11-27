@@ -4,7 +4,7 @@
 
 export default class Resource {
 
-	constructor(public node: Node, public id: string, public rdfType: String | Array<String>, public rdfProperty: any, public rdfaParent: any, public inDOM: Boolean, public text: string) {
+	constructor(public node: Node | null, public id: string, public rdfType: String | Array<String>, public rdfProperty: any, public rdfaParent: any, public inDOM: Boolean, public text: string) {
 		this.node = node;
         this.id = id;
 		this.rdfType = rdfType;
@@ -14,4 +14,8 @@ export default class Resource {
         this.text = text;
 	}
 
+}
+
+export interface ResourceRegistry {
+	[resourceId: string]: Resource
 }
