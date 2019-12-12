@@ -1,6 +1,6 @@
 import Stan from './Stan';
 
-const stan = new Stan(undefined);
+const stan = new Stan(undefined, undefined);
 
 
 document.body.textContent = stan.activeAnnotation ? stan.activeAnnotation.id : 'empty';

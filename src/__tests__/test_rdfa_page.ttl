@@ -8,4 +8,4 @@
 <urn:div=1> hi:hasWorkPart <urn:div=1:para=1>.
 <urn:div=1:para=2> rdf:type hi:ParagraphInWork.
 <urn:div=1:para=2:repr=original> hi:isRepresentationOf <urn:div=1:para=2>.
-<urn:div=1> hi:hasWorkPart <urn:div=1:para=2>.
+<urn:div=1:para=2> hi:isWorkPartOf <urn:div=1>.

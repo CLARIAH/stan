@@ -52,26 +52,17 @@ export default class ExternalRDFUtil {
     async listExternalResources(externalStore: any, resourceRegistry: ResourceRegistry, config: ClientConfig) {
         if (!externalStore) {
             throw Error("externalStore needs to be initialized to index external resources.");
-        } else if (!config.hierarchicalRelations) {
-            throw Error("ClientConfig needs hierarchicalRelations to index external resources.");
-        } else if (!config.representationRelations) {
-            throw Error("ClientConfig needs representationRelations to index external resources.");
         }
         const externalResourceMap = this.mapInternalExternalResources(externalStore, resourceRegistry, config.representationRelations);
         const externalResources = this.parseExternalResourcesHierarchy(externalStore, externalResourceMap, config);
-        //console.log(externalStore);
         return externalResources;
     }
 
     parseExternalResourcesHierarchy(externalStore: any, externalResourceMap: Array<InternalExternalMap>, config: ClientConfig) {
         const externalResources: Array<Resource> = [];
-        let hierarchicalRelations: Array<HierarchicalRelation> = [];
-        if (config.hierarchicalRelations) { 
-            hierarchicalRelations = config.hierarchicalRelations;
-        };
         externalResourceMap.forEach(map => {
-            const externalResource = this.parseExternalResourceData(map.external, externalStore, hierarchicalRelations)
-            const externalHierarchy = this.parseExternalResourceHierarchy(externalStore, externalResource, hierarchicalRelations);
+            const externalResource = this.parseExternalResourceData(map.external, externalStore, config.hierarchicalRelations)
+            const externalHierarchy = this.parseExternalResourceHierarchy(externalStore, externalResource, config.hierarchicalRelations);
             externalHierarchy.forEach(externalParent => {
                 const skip = externalResources.some(resource => { return resource.id === externalParent.id });
                 if (!skip) {
@@ -116,15 +107,19 @@ export default class ExternalRDFUtil {
     }
 
     getInverseIncludes(relation: string, hierarchicalRelations: Array<HierarchicalRelation>) {
-        return hierarchicalRelations.some(hierarchicalRelation => {
+        let inverse = null;
+        hierarchicalRelations.some(hierarchicalRelation => {
             if (relation === hierarchicalRelation.includes && hierarchicalRelation.isIncludedIn) {
-                return hierarchicalRelation.isIncludedIn;
+                inverse = hierarchicalRelation.isIncludedIn;
+                return true;
             } else if (hierarchicalRelation.isIncludedIn && relation === hierarchicalRelation.isIncludedIn) {
-                return hierarchicalRelation.includes;
+                inverse = hierarchicalRelation.includes;
+                return true;
             } else {
                 return false;
             }
         });
+        return inverse;
     }
 
     parseExternalResourceData(resourceId: string, externalStore: any, hierarchicalRelations: Array<HierarchicalRelation>) {
@@ -144,42 +139,15 @@ export default class ExternalRDFUtil {
             if (this.resourceIncludes(triple.predicate.value, hierarchicalRelations)) {
                 parentId = triple.subject.value;
                 property = this.getInverseIncludes(triple.predicate.value, hierarchicalRelations);
-            } else if (this.isRDFTypePredicate(triple.predicate.value)) {
-                types.push(triple.subject.value);
             }
         });
         const resource = new Resource(null, resourceId, types, property, parentId, false, '');
         return resource;
     }
 
-    findExternalResourceRoot(resourceId: string, externalStore: any, relations: Array<HierarchicalRelation>) {
-        const externalResources: Array<Resource> = [];
-        const resource = this.parseExternalResourceData(resourceId, externalStore, relations);
-        externalResources.push(resource);
-        if (resource.rdfaParent) {
-            const largerResources = this.findExternalResourceRoot(resource.rdfaParent, externalStore, relations);
-            largerResources.forEach(resource => {
-                externalResources.push(resource);
-            });
-        }
-        return externalResources;
-    }
-
     isRDFTypePredicate(predicate: string) {
         return (predicate === "http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
     }
-
-    /*
-    checkExternalElements(externalStore: any, resourceRegistry: ResourceRegistry, config: ClientConfig) {
-        if (!externalStore) {
-            throw Error("externalStore needs to be initialized to index external resources.");
-        } else if (!config.hierarchicalRelations) {
-            throw Error("ClientConfig needs hierarchicalRelations to index external resources.");
-        } else if (!config.representationRelations) {
-            throw Error("ClientConfig needs representationRelations to index external resources.");
-        }
-    }
-    */
 
     mapInternalExternalResources(externalStore: any, resourceRegistry: ResourceRegistry, relations: Array<string>) {
         const externalResourceMap: Array<InternalExternalMap> = [];

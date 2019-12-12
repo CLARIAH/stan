@@ -13,10 +13,11 @@
       "js"
     ],
     "preset": "ts-jest",
+    "testRegex": "/src/__tests__/.*\\.(ts|tsx|js)$",
+    "automock": false,
     "setupFiles": [
       "./setupJest.ts"
-    ],
-    "testRegex": "/src/__tests__/.*\\.(ts|tsx|js)$"
+    ]
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",

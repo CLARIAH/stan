@@ -458,7 +458,7 @@ test("parseRDFaResource returns a resource object with no parent if resource has
     const rdfaRootNode = dom.window.document.getElementsByTagName("div")[0];
     const context = makeContext();
     const resource = rdfaUtil.parseRDFaResource(rdfaRootNode, context);
-    expect(resource.rdfaParent).toBe(null);
+    expect(resource.parent).toBe(null);
 });
 
 test("parseRDFaResource returns a resource object with no parent if resource has no parent", () => {
@@ -467,7 +467,7 @@ test("parseRDFaResource returns a resource object with no parent if resource has
     const context = makeContext();
     context.parentResource = "urn:i:am:the:parent";
     const resource = rdfaUtil.parseRDFaResource(rdfaRootNode, context);
-    expect(resource.rdfaParent).toBe(context.parentResource);
+    expect(resource.parent).toBe(context.parentResource);
 });
 
 test("parseRDFaResource returns a resource object with IRI of type", () => {
@@ -476,7 +476,7 @@ test("parseRDFaResource returns a resource object with IRI of type", () => {
     const context = makeContext();
     const typeIRI = context.vocabulary + "#" + rdfaUtil.getRDFaAttributes(rdfaRootNode).typeof;
     const resource = rdfaUtil.parseRDFaResource(rdfaRootNode, context);
-    expect(resource.rdfType).toBe(typeIRI);
+    expect(resource.type).toBe(typeIRI);
 });
 
 test("parseRDFaResource returns a resource object with list of types if resource has multiple types", () => {
@@ -484,20 +484,20 @@ test("parseRDFaResource returns a resource object with list of types if resource
     const multitypeResrouce = dom.window.document.getElementsByTagName("p")[1];
     const context = makeContext();
     const resource = rdfaUtil.parseRDFaResource(multitypeResrouce, context);
-    expect(Array.isArray(resource.rdfType)).toBe(true);
-    expect(resource.rdfType.length).toBe(2);
+    expect(Array.isArray(resource.type)).toBe(true);
+    expect(resource.type.length).toBe(2);
 });
 
-test("parseRDFaResource returns a resource object with no rdfaParent for top resource", () => {
+test("parseRDFaResource returns a resource object with no parent for top resource", () => {
     const dom = generateRDFaDOM();
     const rdfaRootNode = dom.window.document.getElementsByTagName("div")[0];
     const context = makeContext();
     const typeIRI = context.vocabulary + "#" + rdfaUtil.getRDFaAttributes(rdfaRootNode).typeof;
     const resource = rdfaUtil.parseRDFaResource(rdfaRootNode, context);
-    expect(resource.rdfaParent).toBe(null);
+    expect(resource.parent).toBe(null);
 });
 
-test("parseRDFaResource returns a resource object with a rdfaParent for sub-resource", () => {
+test("parseRDFaResource returns a resource object with a parent for sub-resource", () => {
     const dom = generateRDFaDOM();
     const rdfaRootNode = dom.window.document.getElementsByTagName("div")[0];
     const subresourceNode = dom.window.document.getElementsByTagName("p")[0];
@@ -505,7 +505,7 @@ test("parseRDFaResource returns a resource object with a rdfaParent for sub-reso
     const rootNodeAttrs = rdfaUtil.getRDFaAttributes(rdfaRootNode);
     context.parentResource = rootNodeAttrs.resource;
     const resource = rdfaUtil.parseRDFaResource(subresourceNode, context);
-    expect(resource.rdfaParent).toBe(rootNodeAttrs.resource);
+    expect(resource.parent).toBe(rootNodeAttrs.resource);
 });
 
 test("parseRDFaResources returns an empty list is DOM has no RDFa", () => {
@@ -532,7 +532,7 @@ test("parseRDFaResources returns a list of resource objects", () => {
     const context = makeContext();
     const resources = rdfaUtil.parseRDFaResources(rdfaRootNode, context);
     expect(resources[2].id).toBe("urn:div=1:para=1:name=1");
-    expect(resources[2].rdfaParent).toBe(subresourceAttrs.resource);
+    expect(resources[2].parent).toBe(subresourceAttrs.resource);
 });
 test("parseRDFaResources returns a list of resource objects", () => {
     const dom = generateRDFaDOM();
@@ -544,7 +544,7 @@ test("parseRDFaResources returns a list of resource objects", () => {
     const context = makeContext();
     context.vocabulary = null;
     const resources = rdfaUtil.parseRDFaResources(rdfaRootNode, context);
-    expect(resources[1].rdfType).not.toBe(resources[2].rdfType);
+    expect(resources[1].type).not.toBe(resources[2].type);
 });
 
 test("registerRDFaResources always returns a registry when there are no RDFa resources", () => {

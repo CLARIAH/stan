@@ -1,7 +1,7 @@
 import ExternalRDFUtil, { InternalExternalMap } from '../util/extract-external-rdf-util';
 import RDFaUtil from "../util/extract-rdfa-util";
 import Resource, { ResourceRegistry } from "../model/Resource";
-import { baseConfig, externalConfig, HierarchicalRelation } from "../model/ClientConfig";
+import { defaultConfig, HierarchicalRelation } from "../model/ClientConfig";
 const $rdf = require("rdflib");
 const fetch = require("jest-fetch-mock");
 import jsdom from "jsdom";
@@ -99,38 +99,60 @@ test("mapInternalExternalResource returns object with internal and external prop
     expect(map.external).toBe(external);
 });
 
-test("resourceIncludes return false when hierarchicalRelations is empty", () => {
-    if (!externalConfig.hierarchicalRelations) { return false }
-    const relation = externalConfig.hierarchicalRelations[1].includes;
+test("resourceIncludes returns false when hierarchicalRelations is empty", () => {
+    const relation = defaultConfig.hierarchicalRelations[1].includes;
     const relations: Array<HierarchicalRelation> = [];
     const check = externalUtil.resourceIncludes(relation, relations);
     expect(check).toBe(false);
 });
 
-test("resourceIncludes return true when in hierarchicalRelations", () => {
-    if (!externalConfig.hierarchicalRelations) { return false }
-    const relation = externalConfig.hierarchicalRelations[1].includes;
-    const relations: Array<HierarchicalRelation> = [];
-    const check = externalUtil.resourceIncludes(relation, externalConfig.hierarchicalRelations);
+test("resourceIncludes returns true when in hierarchicalRelations", () => {
+    const relation = defaultConfig.hierarchicalRelations[1].includes;
+    const check = externalUtil.resourceIncludes(relation, defaultConfig.hierarchicalRelations);
     expect(check).toBe(true);
 });
 
-test("resourceIsIncludedIn return false when hierarchicalRelations is empty", () => {
-    if (!externalConfig.hierarchicalRelations) { return false };
-    const relation = externalConfig.hierarchicalRelations[1].isIncludedIn;
+test("resourceIsIncludedIn returns false when hierarchicalRelations is empty", () => {
+    const relation = defaultConfig.hierarchicalRelations[1].isIncludedIn;
     if (!relation) { return false };
     const relations: Array<HierarchicalRelation> = [];
     const check = externalUtil.resourceIsIncludedIn(relation, relations);
     expect(check).toBe(false);
 });
 
-test("resourceIsIncludedIn return true when in hierarchicalRelations", () => {
-    if (!externalConfig.hierarchicalRelations) { return false }
-    const relation = externalConfig.hierarchicalRelations[1].isIncludedIn;
+test("resourceIsIncludedIn returns true when in hierarchicalRelations", () => {
+    const relation = defaultConfig.hierarchicalRelations[1].isIncludedIn;
     if (!relation) { return false };
-    const relations: Array<HierarchicalRelation> = [];
-    const check = externalUtil.resourceIsIncludedIn(relation, externalConfig.hierarchicalRelations);
+    const check = externalUtil.resourceIsIncludedIn(relation, defaultConfig.hierarchicalRelations);
     expect(check).toBe(true);
+});
+
+test("getInverseIncludes returns null when relation is not in hierarchicalRelations", () => {
+    const relation = "non-existent-relation";
+    const inverse = externalUtil.getInverseIncludes(relation, defaultConfig.hierarchicalRelations);
+    expect(inverse).toBe(null);
+});
+
+test("getInverseIncludes returns inverse when includes has inverse", () => {
+    const relationPair = defaultConfig.hierarchicalRelations[1];
+    const relation = relationPair.includes;
+    const inverse = externalUtil.getInverseIncludes(relation, defaultConfig.hierarchicalRelations);
+    expect(inverse).toBe(relationPair.isIncludedIn);
+});
+
+test("getInverseIncludes returns null when includes has no inverse", () => {
+    const relationPair = defaultConfig.hierarchicalRelations[0];
+    const relation = relationPair.includes;
+    const inverse = externalUtil.getInverseIncludes(relation, defaultConfig.hierarchicalRelations);
+    expect(inverse).toBe(null);
+});
+
+test("getInverseIncludes returns inverse when isIncludedIn has inverse", () => {
+    const relationPair = defaultConfig.hierarchicalRelations[1];
+    const relation = relationPair.isIncludedIn;
+    if (!relation) { return false };
+    const inverse = externalUtil.getInverseIncludes(relation, defaultConfig.hierarchicalRelations);
+    expect(inverse).toBe(relationPair.includes);
 });
 
 describe("mapInternalExternalResources", () => {
@@ -141,7 +163,7 @@ describe("mapInternalExternalResources", () => {
         const rdfaRootNode = dom.window.document.body.getElementsByTagName("div")[0];
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
         fetch.mockResponseOnce(externalData);
-        const relations = externalConfig.representationRelations;
+        const relations = defaultConfig.representationRelations;
         if (!relations) { return false };
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
             const intExtMap = await externalUtil.mapInternalExternalResources(externalStore, registeredResources, relations);
@@ -218,12 +240,12 @@ describe("parseExternalResourceHierarchy", () => {
         const externalData = getExternalTurtle();
         const rdfaRootNode = dom.window.document.body.getElementsByTagName("div")[0];
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
-        const relations = externalConfig.representationRelations;
+        const relations = defaultConfig.representationRelations;
         if (!relations) { return false }
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
             const externalResourceMap: Array<InternalExternalMap> = [];
-            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, externalConfig);
+            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, defaultConfig);
             expect(externalResourceList.length).toBe(0);
             done();
         });
@@ -234,12 +256,12 @@ describe("parseExternalResourceHierarchy", () => {
         const externalData = getExternalTurtle();
         const rdfaRootNode = dom.window.document.body.getElementsByTagName("div")[0];
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
-        const relations = externalConfig.representationRelations;
+        const relations = defaultConfig.representationRelations;
         if (!relations) { return false }
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
             const externalResourceMap = externalUtil.mapInternalExternalResources(externalStore, registeredResources, relations);
-            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, externalConfig);
+            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, defaultConfig);
             expect(externalResourceList.length).not.toBe(0);
             done();
         });
@@ -250,15 +272,13 @@ describe("parseExternalResourceHierarchy", () => {
         const externalData = getExternalTurtle();
         const rdfaRootNode = dom.window.document.body.getElementsByTagName("div")[0];
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
-        const relations = externalConfig.representationRelations;
+        const relations = defaultConfig.representationRelations;
         if (!relations) { return false }
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
             const externalResourceMap = externalUtil.mapInternalExternalResources(externalStore, registeredResources, relations);
-            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, externalConfig);
-            console.log("externalResourceList:", externalResourceList);
-            console.log("externalResourceList length:", externalResourceList.length);
-            expect(externalResourceList[0].rdfType.length).not.toBe(0);
+            const externalResourceList = externalUtil.parseExternalResourcesHierarchy(externalStore, externalResourceMap, defaultConfig);
+            expect(externalResourceList[0].type.length).not.toBe(0);
             done();
         });
     });
@@ -273,8 +293,8 @@ describe("parseExternalResourceData", () => {
         const resourceId = "urn:div=1:para=1";
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
-            if (!externalConfig.hierarchicalRelations) { return false }
-            const resource = externalUtil.parseExternalResourceData(resourceId, externalStore, externalConfig.hierarchicalRelations);
+            if (!defaultConfig.hierarchicalRelations) { return false }
+            const resource = externalUtil.parseExternalResourceData(resourceId, externalStore, defaultConfig.hierarchicalRelations);
             expect(resource.id).toBe(resourceId);
             done();
         });
@@ -287,9 +307,23 @@ describe("parseExternalResourceData", () => {
         const parentId = "urn:div=1";
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
-            if (!externalConfig.hierarchicalRelations) { return false }
-            const resource = externalUtil.parseExternalResourceData(resourceId, externalStore, externalConfig.hierarchicalRelations);
-            expect(resource.rdfaParent).toBe(parentId);
+            if (!defaultConfig.hierarchicalRelations) { return false }
+            const resource = externalUtil.parseExternalResourceData(resourceId, externalStore, defaultConfig.hierarchicalRelations);
+            expect(resource.parent).toBe(parentId);
+            done();
+        });
+    });
+
+    it("should return a resource with parent id if isIncluded relation is used", (done) => {
+        const dom = generateRDFaDOM();
+        const externalData = getExternalTurtle();
+        const resourceId = "urn:div=1:para=2";
+        const parentId = "urn:div=1";
+        fetch.mockResponseOnce(externalData);
+        externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
+            if (!defaultConfig.hierarchicalRelations) { return false }
+            const resource = externalUtil.parseExternalResourceData(resourceId, externalStore, defaultConfig.hierarchicalRelations);
+            expect(resource.parent).toBe(parentId);
             done();
         });
     });
@@ -298,24 +332,20 @@ describe("parseExternalResourceData", () => {
 
 describe("listExternalResources", () => {
 
-    it("should throw an error if config has no hierarchical relations", (done) => {
-        const dom = generatePlainDOM();
-        const externalStore = $rdf.graph();
+    it("should throw an error when no valid RDF store is passed", (done) => {
         const resourceRegistry: ResourceRegistry = {};
-        externalUtil.listExternalResources(externalStore, resourceRegistry, baseConfig).then(_ => {
-            console.log("THIS SHOULD NOT BE REACHED");
-        }, error => {
+        let error = null;
+        externalUtil.listExternalResources(null, resourceRegistry, defaultConfig).catch(err => {
+            error = err;
             expect(error).not.toBe(null);
             done();
         });
     });
 
     it("should return a list", (done) => {
-        const dom = generatePlainDOM();
         const externalStore = $rdf.graph();
-        const registeredResources: Array<Resource> = [];
         const resourceRegistry: ResourceRegistry = {};
-        externalUtil.listExternalResources(externalStore, resourceRegistry, externalConfig).then(externalResourceList => {
+        externalUtil.listExternalResources(externalStore, resourceRegistry, defaultConfig).then(externalResourceList => {
             expect(externalResourceList).not.toBe(null);
             expect(Array.isArray(externalResourceList)).toBe(true);
             done();
@@ -323,17 +353,14 @@ describe("listExternalResources", () => {
     });
 
     it("should return an empty list if there are no external representations", (done) => {
-        const dom = generatePlainDOM();
         const externalStore = $rdf.graph();
-        const registeredResources: Array<Resource> = [];
         const resourceRegistry: ResourceRegistry = {};
-        externalUtil.listExternalResources(externalStore, resourceRegistry, externalConfig).then(externalResourceList => {
+        externalUtil.listExternalResources(externalStore, resourceRegistry, defaultConfig).then(externalResourceList => {
             expect(externalResourceList.length).toBe(0);
             done();
         });
     });
 
-    /*
     it("should return a non-empty list if there are external representations", (done) => {
         const dom = generateRDFaDOM();
         const externalData = getExternalTurtle();
@@ -341,7 +368,7 @@ describe("listExternalResources", () => {
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
-            const externalResourceList = await externalUtil.listExternalResources(externalStore, registeredResources, externalConfig);
+            const externalResourceList = await externalUtil.listExternalResources(externalStore, registeredResources, defaultConfig);
             expect(externalResourceList.length).not.toBe(0);
             done();
         });
@@ -354,11 +381,12 @@ describe("listExternalResources", () => {
         const registeredResources = rdfaUtil.registerRDFaResources(rdfaRootNode);
         fetch.mockResponseOnce(externalData);
         externalUtil.loadExternalResources(dom.window.document).then(async externalStore => {
-            const externalResourceList = await externalUtil.listExternalResources(externalStore, registeredResources, externalConfig);
-            expect(externalResourceList[0].rdfaParent).not.toBe(null);
+            const externalResourceList = await externalUtil.listExternalResources(externalStore, registeredResources, defaultConfig);
+            expect(externalResourceList[1].parent).not.toBe(null);
             done();
         });
     });
+    /*
     */
 });
 

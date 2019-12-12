@@ -20,9 +20,10 @@ export enum Motivation {
 	TAGGING      = 'tagging'
 }
 
+/*
 export default class Annotation {
 
-	constructor(public context: string, public id: string, private type: string, public creator: string, public created: Date,
+	constructor(public context: string, public id: string | null, private type: string, public creator: string, public created?: Date,
 		public motivation?: Motivation,	public target?: Target, public body?: Body) {
 		this.context = context;
 		this.id = id;
@@ -32,4 +33,31 @@ export default class Annotation {
 		this.target = target;
 		this.body = body;
 	}
+}
+*/
+
+export default interface Annotation {
+	context: string;
+	id: string | null,
+	type: Array<string> | string,
+	creator: string | Creator,
+	created?: string,
+	target: string | Array<Target> | Target,
+	body?: string | Array<Body> | Body
+}
+
+export enum Agent {
+	PERSON = "Person",
+	ORGANIZATION = "Organization",
+	SOFTWARE = "Software"
+}
+
+export interface Creator {
+	id?: string,
+	type?: Agent,
+	name?: string,
+	nickname?: string,
+	email?: string,
+	email_sha1?: string,
+	homepage?: string
 }
