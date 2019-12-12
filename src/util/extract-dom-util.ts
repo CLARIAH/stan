@@ -1,10 +1,11 @@
+import StringUtil from './extract-string-util';
 
-"use strict";
+const stringUtil = new StringUtil();
 
-const DOMUtil = {
+export default class DOMUtil {
 
-    getTextNodes : (node: Node) => {
-        var textNodes : Array<Node> = [];
+    getTextNodes (node: Node) {
+        const textNodes : Array<Node> = [];
         if (node.nodeType === window.Node.TEXT_NODE) {
             textNodes.push(node);
             return textNodes;
@@ -13,36 +14,30 @@ const DOMUtil = {
             if (childNode.nodeType === window.Node.TEXT_NODE) {
                 textNodes.push(childNode);
             } else if (childNode.nodeType === window.Node.ELEMENT_NODE) {
-                let childTextNodes = DOMUtil.getTextNodes(childNode);
-                textNodes = textNodes.concat(childTextNodes);
+                this.getTextNodes(childNode).forEach(cihldTextNode => {
+                    textNodes.push(cihldTextNode);
+                });
             }
         });
         return textNodes;
-    },
+    }
 
-    getElementXpath : (node: HTMLElement) => {
+    getElementXpath (node: HTMLElement) {
         // adjusted from https://stackoverflow.com/questions/2661818/javascript-get-xpath-of-a-node
-        var allNodes = document.getElementsByTagName('*'); 
-        for (var segs = []; node && node.nodeType == 1; ) 
+        // node must be HTMLElement to check for id attribute
+        const segs : Array<String> = [];
+        for (; node && node.nodeType == 1; ) 
         { 
             if (node.hasAttribute('id')) { 
-                    var uniqueIdCount = 0; 
-                    for (var n=0;n < allNodes.length;n++) { 
-                        if (allNodes[n].hasAttribute('id') && allNodes[n].id == node.id) uniqueIdCount++; 
-                        if (uniqueIdCount > 1) break; 
-                    }; 
-                    if ( uniqueIdCount == 1) { 
-                        segs.unshift('id("' + node.getAttribute('id') + '")'); 
-                        return segs.join('/'); 
-                    } else { 
-                        segs.unshift(node.localName.toLowerCase() + '[@id="' + node.getAttribute('id') + '"]'); 
-                    } 
-            } else if (node.hasAttribute('class')) { 
-                segs.unshift(node.localName.toLowerCase() + '[@class="' + node.getAttribute('class') + '"]'); 
+                segs.unshift(node.localName.toLowerCase() + '[@id="' + node.getAttribute('id') + '"]'); 
+            /* ignoring class as this does not identify a single unambiguous element */
+            //} else if (node.hasAttribute('class')) { 
+            //    segs.unshift(node.localName.toLowerCase() + '[@class="' + node.getAttribute('class') + '"]'); 
             } else { 
-                var sib : HTMLElement;
+                let sib : HTMLElement;
                 node.previousSibling
-                for (var i = 1, sib = <HTMLElement>node.previousSibling; sib; ) { 
+                let i = 1;
+                for (sib = <HTMLElement>node.previousSibling; sib; ) { 
                     if (sib.localName == node.localName)  i++; 
                     sib = <HTMLElement>sib.previousSibling
                 }; 
@@ -51,36 +46,59 @@ const DOMUtil = {
             node = <HTMLElement>node.parentNode;
         }; 
         return segs.length ? '/' + segs.join('/') : null;
-    },
+    }
 
-    getXpathElement : (xpath: string, contextNode: Node) => {
-        return document.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-    },
+    getXpathElement (xpath: string, contextNode: Node) {
+        const ele = document.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        return ele.singleNodeValue;
+    }
 
+    getDisplayType (node: HTMLElement) { window.getComputedStyle(node, "").display }
 
-    getDisplayType : (node: HTMLElement) => window.getComputedStyle(node, "").display,
+    getTextNodeDisplayOffset (targetTextNode: Node, containerNode: HTMLElement) {
+        let offset = 0;
+        let done = false;
+        const textNodes = this.getTextNodes(containerNode);
+        let containerText = containerNode.innerText;
+        const textNodeIndex = textNodes.indexOf(targetTextNode);
+        if (textNodeIndex === -1) throw Error("textNode is not contained by containerNode");
+        textNodes.forEach(textNode => {
+            let textNodeText: string = "";
+            if (textNode === targetTextNode) {
+                done = true;
+            } else if (!done && textNode.textContent) {
+                textNodeText = textNode.textContent.trim();
+            }
+            if (!done) {
+                const textIndex = containerText.indexOf(textNodeText);
+                offset += textIndex + textNodeText.length;
+                containerText = containerText.substr(textIndex + textNodeText.length);
+            }
+        });
+        return offset;
 
-    filterTextNodes : (nodes: Array<Node>) => {
+    }
+
+    filterTextNodes (nodes: Array<Node>) {
         return nodes.filter((node) => { return node.nodeType === window.Node.TEXT_NODE});
-    },
+    }
 
-    getDescendants : (node: Node) => {
+    getDescendants (node: Node) {
         let descendants : Array<Node> = [];
         if (node.childNodes.length === 0) {
             return descendants;
         }
         node.childNodes.forEach((childNode) => {
             descendants.push(childNode);
-            descendants = descendants.concat(DOMUtil.getDescendants(childNode));
+            descendants = descendants.concat(this.getDescendants(childNode));
         });
         return descendants;
-    },
+    }
 
-    getCommonAncestor : (startNode: Node, endNode: Node) => {
+    getCommonAncestor (startNode: Node, endNode: Node) {
         if (endNode.nodeType === Node.DOCUMENT_NODE) {
             return null;
-        }
-        if (endNode.contains(startNode)) {
+        } else if (endNode.contains(startNode)) {
             return endNode;
         }
         let currNode = startNode;
@@ -94,7 +112,18 @@ const DOMUtil = {
         } 
         return null;
     }
+
+    // scopeNode is the node within previous text nodes are searched
+    getPreviousTextNode (textNode: Node, scopeNode: Node) {
+        if (textNode.nodeType !== Node.TEXT_NODE || !textNode.parentNode) {
+            throw Error("textNode must be have nodeType Node.TEXT_NODE");
+        }
+        let textNodes = this.getTextNodes(scopeNode);
+        if (textNodes.indexOf(textNode) > 0) {
+            return textNodes[textNodes.indexOf(textNode) - 1];
+        }
+        // if there's only one text node
+        return null;
+    }
 }
 
-export default DOMUtil;
-//module.exports = getDisplayType;

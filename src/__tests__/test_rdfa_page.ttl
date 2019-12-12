@@ -1,0 +1,11 @@
+@prefix hi: <http://boot.huygens.knaw.nl/vgdemo/editionannotationontology.ttl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                
+<urn:div=1> rdf:type hi:Work.
+<urn:div=1> hi:hasRepresentation <urn:div=1:repr=original>.
+<urn:div=1:para=1> rdf:type hi:ParagraphInWork.
+<urn:div=1:para=1> hi:hasRepresentation <urn:div=1:para=1:repr=original>.
+<urn:div=1> hi:hasWorkPart <urn:div=1:para=1>.
+<urn:div=1:para=2> rdf:type hi:ParagraphInWork.
+<urn:div=1:para=2:repr=original> hi:isRepresentationOf <urn:div=1:para=2>.
+<urn:div=1> hi:hasWorkPart <urn:div=1:para=2>.

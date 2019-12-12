@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <link href="http://boot.huygens.knaw.nl/vgdemo/work.ttl" type="text/n3" rel="alternate">
+        <link href="http://boot.huygens.knaw.nl/vgdemo/work.css" rel="stylesheet">
+    </head>
+    <body>
+        <div about="urn:div=1:repr=original" vocab="http://boot.huygens.knaw.nl/vgdemo/editionannotationontology.ttl" typeof="Work">
+            <p resource="urn:div=1:para=1:repr=original" typeof="ParagraphInWork" property="hasWorkPart">first paragraph with <span resource="urn:div=1:para=1:name=1" typeof="Name" property="MentionedIn">A. Person Name</span>.</p>
+            <p resource="urn:div=1:para=2:repr=original" typeof="ParagraphInWork selectWholeElement" property="hasWorkPart">second graph<br/>with a second line</p>
+        </div>
+        <div about="urn:div=2" prefix="hi: http://boot.huygens.knaw.nl/vgdemo/editionannotationontology.ttl# vg: http://boot.huygens.knaw.nl/vgdemo/vangoghannotationontology.ttl#" typeof="hi:Work">
+            <p>This text has a footnote<sup property="hi:IgnorableElement">a</sup> that should be ignored.</p>
+            <div resource="urn:div=2:sub=1" prefix="vg: http://boot.huygens.knaw.nl/vgdemo/vangoghcorrespondenceontology.ttl#" typeof="vg:Paragraph">
+                this sub has no RDFa property.
+            </div>
+            <div resource="urn:div=2:sub=2" typeof="vg:Paragraph">
+                this sub reuses the same prefix for a different vocabulary.
+            </div>
+        </div>
+        <div about="urn:div=3" vocab="http://boot.huygens.knaw.nl/vgdemo/editionannotationontology.ttl#" typeof="Work">
+            <div resource="urn:div=2:sub=3">
+                this sub has no type.
+            </div>
+        </div>
+    </body>
+</html>

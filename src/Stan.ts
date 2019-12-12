@@ -9,7 +9,7 @@ export default class Stan {
 	}
 
 	//this makes sure the active annotation is changed; note: all calls to the server work with the active annotation
-	set activeAnnotation() {
+	setActiveAnnotation() {
 		//TODO make sure to update the UI (if any)
 	}
 

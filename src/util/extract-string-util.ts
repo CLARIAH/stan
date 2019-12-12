@@ -1,22 +1,20 @@
 
-"use strict";
+export default class StringUtil {
 
-const StringUtil = {
-
-    collapseRightWhitespace : (text: string) => {
+    collapseRightWhitespace (text: string) {
         return text.replace(/ +$/, "");
-    },
+    }
 
-    collapseLeftWhitespace : (text: string) => {
+    collapseLeftWhitespace (text: string) {
         return text.replace(/^ +/, "");
-    },
+    }
 
-    collapseWhitespace : (text: string) => {
-        return StringUtil.collapseLeftWhitespace(StringUtil.collapseRightWhitespace(text));
-    },
+    collapseWhitespace (text: string) {
+        return this.collapseLeftWhitespace(this.collapseRightWhitespace(text));
+    }
 
-    isURL : (text: string) => {
-        var pattern = new RegExp('^(https?:\\/\\/)'+ // protocol
+    isURL (text: string) {
+        const pattern = new RegExp('^(https?:\\/\\/)'+ // protocol
         '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name and extension
         'localhost|'+ // OR localhost
         '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
@@ -28,5 +26,3 @@ const StringUtil = {
     }
 
 }
-
-export default StringUtil;
