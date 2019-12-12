@@ -6,19 +6,25 @@
     "test": "jest --coverage"
   },
   "jest": {
+    "automock": false,
     "moduleFileExtensions": [
       "ts",
       "tsx",
       "js"
     ],
     "preset": "ts-jest",
+    "setupFiles": [
+      "./setupJest.ts"
+    ],
     "testRegex": "/src/__tests__/.*\\.(ts|tsx|js)$"
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",
     "@types/jsdom": "^12.2.4",
     "jest": "^24.9.0",
+    "jest-fetch-mock": "^2.1.2",
     "jsdom": "^15.2.0",
+    "rdflib": "^1.0.6",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
   }
