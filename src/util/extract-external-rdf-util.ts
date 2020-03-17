@@ -76,8 +76,8 @@ export default class ExternalRDFUtil {
     parseExternalResourceHierarchy(externalStore: any, externalResource: Resource, hierarchicalRelations: Array<HierarchicalRelation>) {
         const externalResources: Array<Resource> = [];
         externalResources.push(externalResource);
-        if (externalResource.rdfaParent) {
-            const parentResource = this.parseExternalResourceData(externalResource.rdfaParent, externalStore, hierarchicalRelations);
+        if (externalResource.parent) {
+            const parentResource = this.parseExternalResourceData(externalResource.parent, externalStore, hierarchicalRelations);
             const parentResourceHierarchy = this.parseExternalResourceHierarchy(externalStore, parentResource, hierarchicalRelations);
             parentResourceHierarchy.forEach(parentResource => {
                 externalResources.push(parentResource);

@@ -6,13 +6,13 @@ const { JSDOM } = jsdom;
 const rdfaUtil = new RDFaUtil();
 
 const generatePlainDOM = () => {
-    const htmlSource = fs.readFileSync("./__tests__/test_plain_page.html", "utf-8");
+    const htmlSource = fs.readFileSync("./test_examples/test_plain_page.html", "utf-8");
     const dom = new JSDOM(htmlSource, { pretendToBeVisual: true });
     return dom;
 }
 
 const getRDFaHTMLSource = () => {
-    return fs.readFileSync("./__tests__/test_rdfa_page.html", "utf-8");
+    return fs.readFileSync("./test_examples/test_rdfa_page.html", "utf-8");
 }
 
 const generateRDFaDOM = () => {

@@ -1,3 +1,8 @@
+import { Motivation } from "../model/Annotation";
+import Annotation from "../model/Annotation";
+import Target from '../model/Target';
+import { NestedPIDSelector } from "../model/Selector";
+
 export enum AnnotationEvent {
     ON_SAVE = 'on-save-annotation',
     ON_DELETE = 'on-delete-annotation',
@@ -8,7 +13,12 @@ export enum AnnotationEvent {
     ON_CHANGE_TARGET = 'on-change-target'
 }
 
-export class AnnotationUtil {
+export default class AnnotationUtil {
+
+    static listMotivations = () => {
+        const motivations: String[] = Object.values(Motivation);
+        return motivations;
+    }
 
     static constructNPID = (
         npidTemplate : any,
@@ -127,18 +137,67 @@ export class AnnotationUtil {
         } //TODO add text selection bit
     };
 
+    // get list of targets from an annotation, even if there is only one target
+    static extractTargets = (annotation: Annotation) => {
+        if (Array.isArray(annotation.target)) {
+            return annotation.target;
+        } else {
+            const targetList: Array<Target | string> = [];
+            targetList.push(annotation.target);
+            return targetList;
+        }
+    }
+
+    // get list of target IDs from an annotation, even if there is only one target ID
+    static extractTargetIds = (annotation: Annotation) => {
+        return AnnotationUtil.extractTargets(annotation).map(target => {
+            return (typeof(target) === "string") ? target : AnnotationUtil.extractTargetId(target);
+        })
+    }
+
+    // get target ID from a target
+    static extractTargetId = (target: Target) => {
+        // A target object should have an id property or a source property (if there is a selector)
+        if (target.source) {
+            return target.source;
+        } else if (target.id) {
+            return target.id;
+        } else {
+            throw Error('Error: target object MUST have either an id or a source property');
+        }
+    }
+
+    // NestedPIDSelectors have multiple target IDs
+    // Use this function to get the IDs if you know the target has a NestedPIDSelector
+    static extractNestedPIDTargetIds = (target: Target) => {
+        // if there is a nested PID selector, return its list of IDs
+        if (!target.selector || !(target.selector instanceof NestedPIDSelector)) {
+            throw Error('Error: target has no NestedPIDSelector')
+        } 
+        return target.selector.value.map(nestedTarget => {
+            if (nestedTarget.id) {
+                return nestedTarget.id;
+            } else {
+                throw Error('Nested PID target must have ')
+            }
+        });
+    }
+
     /* --------------------------- MISC HELPER FUNCTIONS --------------------------- */
 
     static getLevelOfSemanticType = (npidTemplate : any, semanticType? : string) => {
         return npidTemplate.findIndex((pid : any) => pid.type.indexOf(semanticType) !== -1);
     }
 
-    static getNPIDLength = (annotation : any) => {
-        return AnnotationUtil.hasNPID(annotation) ? annotation.target.selector.value.length : -1;
+    static getNPIDLength = (target : Target) => {
+        if (target.selector && target.selector instanceof NestedPIDSelector) {
+            return target.selector.value.length;
+        } else {
+            return -1;
+        }
     }
 
-    static hasNPID = (annotation : any) => annotation && annotation.target &&
-        annotation.target.selector && annotation.target.selector.type === 'NestedPIDSelector';
+    static hasNPID = (target : Target) => target.selector && target.selector instanceof NestedPIDSelector;
 
 }
 

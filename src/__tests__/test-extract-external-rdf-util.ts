@@ -12,11 +12,11 @@ const externalUtil = new ExternalRDFUtil();
 const rdfaUtil = new RDFaUtil();
 
 const getExternalTurtle = () => {
-    return fs.readFileSync("./__tests__/test_rdfa_page.ttl", "utf-8");
+    return fs.readFileSync("./test_examples/test_rdfa_page.ttl", "utf-8");
 }
 
 const getPlainHTMLSource = () => {
-    return fs.readFileSync("./__tests__/test_plain_page.html", "utf-8");
+    return fs.readFileSync("./test_examples/test_plain_page.html", "utf-8");
 }
 
 const generatePlainDOM = () => {
@@ -26,7 +26,7 @@ const generatePlainDOM = () => {
 }
 
 const getRDFaHTMLSource = () => {
-    return fs.readFileSync("./__tests__/test_rdfa_page.html", "utf-8");
+    return fs.readFileSync("./test_examples/test_rdfa_page.html", "utf-8");
 }
 
 const generateRDFaDOM = () => {

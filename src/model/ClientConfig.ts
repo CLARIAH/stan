@@ -89,6 +89,8 @@ export default class ClientConfig {
 
 export interface ClientConfig {
     annotationServer: AnnotationServer,
+    useRDFaIdentifiers: boolean,
+    useNestedPIDSelector: boolean,
     editOptions: {
         [targetType: string]: {
             "motivations": Array<Motivation>
@@ -124,6 +126,8 @@ export const defaultConfig: ClientConfig = {
     annotationServer: {
         url: "https://annotation.clariah.nl/api"
     },
+    useRDFaIdentifiers: false,
+    useNestedPIDSelector: false,
     editOptions: {
         default: {"motivations": [Motivation.BOOKMARKING, Motivation.COMMENTING, Motivation.TAGGING, Motivation.LINKING]}
     },
