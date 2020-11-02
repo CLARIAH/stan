@@ -175,45 +175,45 @@ test("getCommonAncestor of p 1 and p 2 returns body:", () => {
     let div = dom.window.document.getElementsByTagName("div")[0];
     let p1 = dom.window.document.getElementsByTagName("p")[0];
     let p2 = dom.window.document.getElementsByTagName("p")[1];
-    let ancestor = domUtil.getCommonAncestor(p1, p2);
+    let ancestor = domUtil.getContainerNode(p1, p2);
     expect(ancestor).toBe(div);
 });
 
-test("getCommonAncestor of p 2 and br returns p 2:", () => {
+test("getContainerNode of p 2 and br returns p 2:", () => {
     let dom = generateComplexDOM();
     let br = dom.window.document.getElementsByTagName("br")[0];
     let p2 = dom.window.document.getElementsByTagName("p")[1];
-    let ancestor = domUtil.getCommonAncestor(br, p2);
+    let ancestor = domUtil.getContainerNode(br, p2);
     expect(ancestor).toBe(p2);
 });
 
-test("getCommonAncestor of p 1 and br returns body:", () => {
+test("getContainerNode of p 1 and br returns body:", () => {
     let dom = generateComplexDOM();
     let div = dom.window.document.getElementsByTagName("div")[0];
     let br = dom.window.document.getElementsByTagName("br")[0];
     let p1 = dom.window.document.getElementsByTagName("p")[0];
-    let ancestor = domUtil.getCommonAncestor(br, p1);
+    let ancestor = domUtil.getContainerNode(br, p1);
     expect(ancestor).toBe(div);
 });
 
-test("getCommonAncestor of p 1 and p 1 returns p 1:", () => {
+test("getContainerNode of p 1 and p 1 returns p 1:", () => {
     let dom = generateComplexDOM();
     let p1 = dom.window.document.getElementsByTagName("p")[0];
-    let ancestor = domUtil.getCommonAncestor(p1, p1);
+    let ancestor = domUtil.getContainerNode(p1, p1);
     expect(ancestor).toBe(p1);
 });
 
-test("getCommonAncestor of p 1 and document returns null:", () => {
+test("getContainerNode of p 1 and document returns null:", () => {
     let dom = generateComplexDOM();
     let p1 = dom.window.document.getElementsByTagName("p")[0];
-    let ancestor = domUtil.getCommonAncestor(p1, dom.window.document);
+    let ancestor = domUtil.getContainerNode(p1, dom.window.document);
     expect(ancestor).toBe(null);
 });
 
-test("getCommonAncestor of document and p 1 returns null:", () => {
+test("getContainerNode of document and p 1 returns null:", () => {
     let dom = generateComplexDOM();
     let p1 = dom.window.document.getElementsByTagName("p")[0];
-    let ancestor = domUtil.getCommonAncestor(dom.window.document, p1);
+    let ancestor = domUtil.getContainerNode(dom.window.document, p1);
     expect(ancestor).toBe(null);
 });
 

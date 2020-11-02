@@ -20,30 +20,35 @@ export enum Motivation {
 	TAGGING      = 'tagging'
 }
 
-/*
-export default class Annotation {
+const combineElements = (ele1: string | Array<string>, ele2: string | Array<string>) => {
+	if (!Array.isArray(ele1)) {
+		ele1 = [ele1]
+	}
+	if (!Array.isArray(ele2)) {
+		ele2 = [ele2]
+	}
+	return ele1.concat(ele2);
+}
 
-	constructor(public context: string, public id: string | null, private type: string, public creator: string, public created?: Date,
-		public motivation?: Motivation,	public target?: Target, public body?: Body) {
-		this.context = context;
+export default class Annotation {
+	public context: string | Array<string> = "http://www.w3.org/ns/anno.jsonld";
+	public type: string | Array<string> = "Annotation";
+	constructor(public target: Target | Array<Target>, public id?: string | null, public creator?: string, public created?: string,
+		public motivation?: Motivation,	public body?: Body | Array<Body>, 
+		public additionalContexts?: string | Array<string>, private additionalTypes?: string | Array<string>) {
+			if (additionalContexts) {
+				this.context = combineElements(this.context, additionalContexts);
+			}
+			if (additionalTypes) {
+				this.type = combineElements(this.type, additionalTypes);
+			}
 		this.id = id;
-		this.type = type;
 		this.creator = creator;
 		this.created = created;
+		this.motivation = motivation;
 		this.target = target;
 		this.body = body;
 	}
-}
-*/
-
-export default interface Annotation {
-	context: string;
-	id: string | null,
-	type: Array<string> | string,
-	creator: string | Creator,
-	created?: string,
-	target: string | Array<Target> | Target,
-	body?: string | Array<Body> | Body
 }
 
 export enum Agent {

@@ -22,6 +22,7 @@ export default class DOMUtil {
         return textNodes;
     }
 
+    // given a DOM element, return its XPath
     getElementXpath (node: HTMLElement) {
         // adjusted from https://stackoverflow.com/questions/2661818/javascript-get-xpath-of-a-node
         // node must be HTMLElement to check for id attribute
@@ -48,6 +49,7 @@ export default class DOMUtil {
         return segs.length ? '/' + segs.join('/') : null;
     }
 
+    // given an XPath expression, return the corresponding DOM element
     getXpathElement (xpath: string, contextNode: Node) {
         const ele = document.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
         return ele.singleNodeValue;
@@ -95,7 +97,10 @@ export default class DOMUtil {
         return descendants;
     }
 
-    getCommonAncestor (startNode: Node, endNode: Node) {
+    // given two DOM nodes, return lowest node that contain both
+    // if one of the two nodes contains the other, the former is 
+    // the lowest common ancestor
+    getContainerNode (startNode: Node, endNode: Node) {
         if (endNode.nodeType === Node.DOCUMENT_NODE) {
             return null;
         } else if (endNode.contains(startNode)) {

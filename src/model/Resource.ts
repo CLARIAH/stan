@@ -4,7 +4,7 @@
 
 export default class Resource {
 
-	constructor(public node: Node | null, public id: string, public type: String | Array<String>, public parentRelation: any, public parent: any, public inDOM: Boolean, public text: string) {
+	constructor(public node: Node | null, public id: string, public type: string | Array<string>, public parentRelation: any, public parent: any, public inDOM: Boolean, public text: string) {
 		this.node = node;
         this.id = id;
 		this.type = type;
@@ -16,6 +16,14 @@ export default class Resource {
 
 }
 
-export interface ResourceRegistry {
+export class ResourceRegistry {
+
+	constructor(public topLevelResources: Array<string>, public index: ResourceIndex) {
+		this.topLevelResources = topLevelResources
+		this.index = index
+	}
+}
+
+export interface ResourceIndex {
 	[resourceId: string]: Resource
 }

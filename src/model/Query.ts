@@ -1,4 +1,4 @@
-import User, { AccessLevel } from "./User";
+import { AccessLevel } from "./User";
 
 export interface Query {
     iris: boolean,
@@ -25,6 +25,19 @@ export const defaultQuery: Query = {
     includePermissions: true,
     targetId: null,
     collectionId: null
+}
+
+export const makeQuery = (params: Params) => {
+    const query: Query = defaultQuery;
+    if (params.accessStatus)
+        defaultQuery.accessStatus = params.accessStatus
+    if (params.includePermissions)
+        defaultQuery.includePermissions = params.includePermissions
+    if (params.targetId)
+        defaultQuery.targetId = params.targetId
+    if (params.collectionId)
+        defaultQuery.collectionId = params.collectionId
+    return query
 }
 
 export const makeQueryString = (params: Params) => {

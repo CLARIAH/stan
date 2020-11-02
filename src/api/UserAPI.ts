@@ -1,5 +1,5 @@
 import API from "./API";
-import User from "../model/User";
+import User, { AccessLevel } from "../model/User";
 import { ClientConfig } from "../model/ClientConfig";
 
 export default class UserAPI extends API {
@@ -19,7 +19,8 @@ export default class UserAPI extends API {
                 username: registration.user.username,
                 password: user.password,
                 token: registration.user.token,
-                userId: registration.user.username
+                userId: registration.user.username,
+                accessStatus: [AccessLevel.PRIVATE]
             }
             return newUser;
         } else if (response.status === 403) {
@@ -44,7 +45,8 @@ export default class UserAPI extends API {
                 username: registration.user.username,
                 password: user.password,
                 token: registration.user.token,
-                userId: registration.user.username
+                userId: registration.user.username,
+                accessStatus: [AccessLevel.PRIVATE]
             }
             return newUser;
         } else if (response.status === 400) {

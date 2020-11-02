@@ -1,5 +1,5 @@
 import UserAPI from "../api/UserAPI";
-import User from "../model/User";
+import User, { AccessLevel } from "../model/User";
 import { defaultConfig } from "../model/ClientConfig";
 import { user } from "../test_examples/test_annotation_data";
 //const fetch = require("jest-fetch-mock");
@@ -10,7 +10,8 @@ const makeUser = () => {
         username: user.username,
         password: user.password,
         token: null,
-        userId: null
+        userId: null,
+        accessStatus: [AccessLevel.PRIVATE]
     }
     return newUser;
 }

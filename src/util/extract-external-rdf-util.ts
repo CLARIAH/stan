@@ -1,7 +1,7 @@
 import Resource, { ResourceRegistry } from "../model/Resource";
 import { ClientConfig, HierarchicalRelation } from "../model/ClientConfig";
-import { stringify } from "querystring";
-import { isNullOrUndefined } from "util";
+//import { stringify } from "querystring";
+//import { isNullOrUndefined } from "util";
 
 const $rdf = require("rdflib");
 //const IndexedFormula = require("rdflib");
@@ -154,10 +154,10 @@ export default class ExternalRDFUtil {
         relations.forEach(predicate => {
             const predicateNode = $rdf.sym(predicate);
             externalStore.match(null, predicateNode, null).forEach((triple: any) => {
-                if (triple.subject.value in resourceRegistry) {
+                if (triple.subject.value in resourceRegistry.index) {
                     const map = this.mapInternalExternalResource(triple.subject.value, triple.object.value);
                     externalResourceMap.push(map);
-                } else if (triple.object.value in resourceRegistry) {
+                } else if (triple.object.value in resourceRegistry.index) {
                     const map = this.mapInternalExternalResource(triple.object.value, triple.subject.value);
                     externalResourceMap.push(map);
                 }

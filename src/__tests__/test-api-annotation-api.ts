@@ -4,7 +4,7 @@ import AnnotationUtil from "../util/annotation-util";
 import User, { AccessLevel } from "../model/User";
 import { defaultConfig } from "../model/ClientConfig";
 import {user, annotationInvalid, annotationValid, empty_container, filled_container} from "../test_examples/test_annotation_data";
-import { makeQueryString } from "../model/Query";
+import { makeQueryString, defaultQuery } from "../model/Query";
 //const fetch = require("jest-fetch-mock");
 const fetchMock = require('fetch-mock-jest');
 
@@ -110,10 +110,11 @@ describe("AnnotationAPI", () => {
             const user = makeUser();
             user.accessStatus = [AccessLevel.PRIVATE];
             const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 403 }
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).catch(error => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).catch(error => {
                 expect(error).not.toBe(null);
                 done();
             })
@@ -122,10 +123,11 @@ describe("AnnotationAPI", () => {
         it("should throw an error when server behaves unexpectedly", (done) => {
             const user = makeUser();
             const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 500 }
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).catch(error => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).catch(error => {
                 expect(error).not.toBe(null);
                 done();
             })
@@ -134,10 +136,11 @@ describe("AnnotationAPI", () => {
         it("should return an array", (done) => {
             const user = makeUser();
             const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 200, body: JSON.stringify(empty_container)}
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).then(annotations => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).then(annotations => {
                 expect(Array.isArray(annotations)).toBe(true);
                 done();
             })
@@ -146,11 +149,12 @@ describe("AnnotationAPI", () => {
         it("with anonymous user should return an array", (done) => {
             const user = makeUser();
             user.username = null;
-            const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const query = makeQueryString({accessStatus: [AccessLevel.PUBLIC]});
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 200, body: JSON.stringify(empty_container)}
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).then(annotations => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).then(annotations => {
                 expect(Array.isArray(annotations)).toBe(true);
                 done();
             })
@@ -159,10 +163,11 @@ describe("AnnotationAPI", () => {
         it("should return an empty list of there are no annotations", (done) => {
             const user = makeUser();
             const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 200, body: JSON.stringify(empty_container)}
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).then(annotations => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).then(annotations => {
                 expect(annotations.length).toBe(0);
                 done();
             })
@@ -171,10 +176,11 @@ describe("AnnotationAPI", () => {
         it("should return a list of annotations", (done) => {
             const user = makeUser();
             const query = makeQueryString({accessStatus: user.accessStatus});
-            fetchMock.get(defaultConfig.annotationServer.url + "/annotations/" + query, () => {
+            const url = defaultConfig.annotationServer.url + "/annotations/" + query
+            fetchMock.get(url, () => {
                 return { status: 200, body: JSON.stringify(filled_container)}
             });
-            AnnotationAPI.getAnnotations(defaultConfig, user).then(annotations => {
+            AnnotationAPI.getAnnotations(url, defaultConfig, user).then(annotations => {
                 expect(annotations.length).toBe(1);
                 let error = null;
                 try {

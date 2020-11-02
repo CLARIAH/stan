@@ -333,7 +333,7 @@ describe("parseExternalResourceData", () => {
 describe("listExternalResources", () => {
 
     it("should throw an error when no valid RDF store is passed", (done) => {
-        const resourceRegistry: ResourceRegistry = {};
+        const resourceRegistry: ResourceRegistry = new ResourceRegistry([], {});
         let error = null;
         externalUtil.listExternalResources(null, resourceRegistry, defaultConfig).catch(err => {
             error = err;
@@ -344,7 +344,7 @@ describe("listExternalResources", () => {
 
     it("should return a list", (done) => {
         const externalStore = $rdf.graph();
-        const resourceRegistry: ResourceRegistry = {};
+        const resourceRegistry: ResourceRegistry = new ResourceRegistry([], {});
         externalUtil.listExternalResources(externalStore, resourceRegistry, defaultConfig).then(externalResourceList => {
             expect(externalResourceList).not.toBe(null);
             expect(Array.isArray(externalResourceList)).toBe(true);
@@ -354,7 +354,7 @@ describe("listExternalResources", () => {
 
     it("should return an empty list if there are no external representations", (done) => {
         const externalStore = $rdf.graph();
-        const resourceRegistry: ResourceRegistry = {};
+        const resourceRegistry: ResourceRegistry = new ResourceRegistry([], {});
         externalUtil.listExternalResources(externalStore, resourceRegistry, defaultConfig).then(externalResourceList => {
             expect(externalResourceList.length).toBe(0);
             done();

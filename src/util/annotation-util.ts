@@ -1,8 +1,19 @@
 import { Motivation } from "../model/Annotation";
 import Annotation from "../model/Annotation";
 import Target from '../model/Target';
-import { NestedPIDSelector } from "../model/Selector";
+import Selector, { makeSelector, NestedPIDElement, NestedPIDSelector, SelectorType } from "../model/Selector";
+import RDFaUtil from "../util/extract-rdfa-util";
+import SelectionUtil, { MouseSelection, TextSelection } from "../util/extract-selection-util";
+import { ClientConfig } from "../model/ClientConfig";
+import Resource, { ResourceRegistry } from "../model/Resource";
+import TargetRegistry from "../TargetRegistry";
+import DOMUtil from "./extract-dom-util";
 
+const util = {
+    dom: new DOMUtil(),
+    rdfa: new RDFaUtil(),
+    selection: new SelectionUtil()
+}
 export enum AnnotationEvent {
     ON_SAVE = 'on-save-annotation',
     ON_DELETE = 'on-delete-annotation',
@@ -15,43 +26,183 @@ export enum AnnotationEvent {
 
 export default class AnnotationUtil {
 
+    constructor(public config: ClientConfig, public resourceRegistry: ResourceRegistry | null) {
+        this.config = config;
+        this.resourceRegistry = resourceRegistry;
+    }
+
     static listMotivations = () => {
         const motivations: String[] = Object.values(Motivation);
         return motivations;
     }
 
-    static constructNPID = (
-        npidTemplate : any,
-        ids : Array<string>,
-        selection : boolean = false,
-        additionalTypes : Array<string> = []
-        ) => {
-        if(!npidTemplate) {
-            alert('Error: you have to supply an NPID template before a NPID can be constructed');
-            return null;
-        }
-        const template : any = ObjectUtil.clone(npidTemplate); //make sure to always create a new object to avoid weird behaviour
-
-        //then grab the relevant part of the template
-        const nestedPID : any = template.nestedPID.slice(0, ids.length).map((e : any ,i : number) => {
-            return {
-                id: ids[i], //assign the supplied id
-                type: e.type,
-                property: e.property
+    static makeTargetTextSelection = (selection: MouseSelection, useRDFaIdentifiers: boolean = false): Selector => {
+        // transform selection object into text selection with offsets inside selection container node
+        const textSelection = util.selection.makeTextSelection(selection);
+        // set start and end positions for selector
+        const position = {start: textSelection.containerStartOffset, end: textSelection.containerEndOffset}
+        if (useRDFaIdentifiers) {
+            // if using RDFa resources, find lowest container resources
+            const rdfaContainer = util.rdfa.getRDFaContainer(textSelection.containerNode);
+            if (rdfaContainer) {
+                // recalculcate text offsets w.r.t. rdfaContainer
+                const containerOffset = util.selection.findNodeOffsetInContainer(textSelection.containerNode, rdfaContainer)
+                position.start += containerOffset;
+                position.end += containerOffset
             }
-        });
-
-        //add the selection type
-        if(selection && template.selectionType) {
-            nestedPID[nestedPID.length -1].type.push(template.selectionType);
         }
-        //add the additional types
-        nestedPID[nestedPID.length -1].type.push(...additionalTypes);
+        // generate text position selector
+        const selector = makeSelector(SelectorType.TEXT_POS_SELECTOR, position)
+        return selector;
+    }
 
+    static makeTargetFromId = (targetId: string): Target => {
+        // use a target ID (e.g. a URL) as target
+        let target = Target.construct({});
+        target.id = targetId;
+        return target;
+    }
+
+    public makeRDFaTargetWithTextSelection = (selection: MouseSelection, resourceRegistry: ResourceRegistry): Target => {
+        let target = Target.construct({});
+        const selector = AnnotationUtil.makeTargetTextSelection(selection, true);
+        const textSelection = util.selection.makeTextSelection(selection);
+        const rdfaContainer = util.rdfa.getRDFaContainer(textSelection.containerNode);
+        const rdfaResource = util.rdfa.getRDFaResourceAttribute(<HTMLElement>rdfaContainer);
+        if (this.config.useNestedPIDSelector) {
+            // use RDFa container resource and its RDFa oaretnas target source
+            const nestedPID = this.constructNPID(rdfaResource);
+            target.source = nestedPID[0].id;
+            target.selector = makeSelector(SelectorType.NESTED_PID_SELECTOR, {value: nestedPID});
+            target.selector.refinedBy = selector;
+        } else {
+            // use RDFa container resource as target source
+            target.source = rdfaResource;
+            target.selector = selector;
+        }
+        target.type = "Text"
+        return target
+    }
+
+    public makeRDFaTarget = (resourceRegistry: ResourceRegistry): Target | Array<Target> => {
+        let selection = util.selection.getDOMSelection();
+        let self = this;
+        // there has to be a registry of RDFa resource to make an RDFa target
+        if (selection) {
+            // if the user selected something in the DOM, use that as a selector and
+            // the RDFa resource that it's part of as target
+            return this.makeRDFaTargetWithTextSelection(selection, resourceRegistry);
+        } else {
+            // if there is no selection, all top-level RDFa resources are targets
+            const targets = resourceRegistry.topLevelResources.map(resourceId => {
+                const nestedPID = self.constructNPID(resourceId)
+                let target = Target.construct({});
+                if (self.config.useNestedPIDSelector) {
+                    // make a NestedPIDSelector
+                    target.source = resourceId
+                    target.selector = makeSelector(SelectorType.NESTED_PID_SELECTOR, {value: nestedPID})
+                } else {
+                    target.id = resourceId;
+                }
+                target.type = "Text"
+                return target;
+            })
+            // if there is only a single top-level RDFa resource, return it as a single target
+            // otherwise return as Array of targets
+            return (resourceRegistry.topLevelResources.length > 1) ? targets : targets[0];
+        }
+    }
+
+    public makeWindowTarget = (): Target => {
+        let selection = util.selection.getDOMSelection();
+        if (selection) {
+            // if something is selected, make an XPathSelector and refine it by
+            // a TextPositionSelector
+            const textSelection = util.selection.makeTextSelection(selection);
+            const xpath = util.dom.getElementXpath(<HTMLElement>textSelection.containerNode);
+            const selector = makeSelector(SelectorType.XPATH_SELECTOR, {value: xpath});
+            const position = {start: textSelection.containerStartOffset, end: textSelection.containerEndOffset}
+            selector.refinedBy = makeSelector(SelectorType.TEXT_POS_SELECTOR, position)
+            const target = Target.construct({
+                source: window.location.href,
+                selector: selector,
+                type: "Text"
+            });
+            return target;
+        } else {
+            // use window URL as target
+            return AnnotationUtil.makeTargetFromId(window.location.href);
+        }
+
+    }
+
+    public makeTarget = (): Target | Array<Target> => {
+        if (this.config.useRDFaIdentifiers) {
+            if (!this.resourceRegistry) {
+                throw Error('Cannot make RDFa target, annotationUtil has no ResourceRegistry.')
+            } else {
+                return this.makeRDFaTarget(this.resourceRegistry);
+            }
+        } else {
+            return this.makeWindowTarget();
+        }
+    }
+
+    public makeTargetFromRegistry = (resourceId: string, selector?: Selector): Target => {
+        let target = Target.construct({});
+        if (!this.resourceRegistry) {
+                throw Error('Cannot make RDFa target, annotationUtil has no ResourceRegistry.')
+        } else if (!this.resourceRegistry.index.hasOwnProperty(resourceId)) {
+            throw Error('resourceId is not in resourceRegistry');
+        } else {
+            if (this.config.useNestedPIDSelector) {
+                const nestedPID = this.constructNPID(resourceId);
+                console.log(nestedPID);
+                target.source = resourceId
+                target.selector = makeSelector(SelectorType.NESTED_PID_SELECTOR, nestedPID);
+                target.type = this.resourceRegistry.index[resourceId].type
+                if (selector) {
+                    target.selector.refinedBy = selector;
+                }
+            } else {
+                target.id = resourceId
+                target.type = this.resourceRegistry.index[resourceId].type
+                if (selector) {
+                    target.selector = selector;
+                }
+            }
+        }
+        return target;
+    }
+
+    static constructNPIDElement = (resource: Resource) => {
+        let nestedPIDElement: NestedPIDElement = {
+            id: resource.id,
+            type: resource.type,
+            property: resource.parentRelation
+        }
+        return nestedPIDElement;
+    }
+
+    public constructNPID = (resourceId : string) => {
+        if(!this.resourceRegistry) {
+            throw Error('Error: you have to supply an NPID template before a NPID can be constructed');
+        } else if (!this.resourceRegistry.index.hasOwnProperty(resourceId)) {
+            throw Error('id not in registry:' + resourceId)
+        }
+        let resource = this.resourceRegistry.index[resourceId];
+        let nestedPIDElement = AnnotationUtil.constructNPIDElement(resource);
+        const nestedPID: Array<NestedPIDElement> = [nestedPIDElement];
+        while (resource.parent !== null) {
+            resourceId = resource.parent;
+            resource = this.resourceRegistry.index[resourceId];
+            let nestedPIDElement = AnnotationUtil.constructNPIDElement(resource);
+            nestedPID.push(nestedPIDElement);
+        }
         return nestedPID;
     }
 
-    static newAnnotationFromNPID = (npid : any, selection : any, nonW3Cparams : any = {}) => {
+    static newAnnotationFromNPID = (npid : Array<NestedPIDElement>, selection : Selector | null, nonW3Cparams : any = {}) => {
         let target : any = {
             type : npid[npid.length -1].type[0], // always use the first type for the target.source
             source : npid[npid.length -1].id,
@@ -62,11 +213,13 @@ export default class AnnotationUtil {
         }
 
         //Then assign the selection bit as a refinedBy element
+        /* 
         const refinedBy : any = selection ? AnnotationUtil.__generateRefinedBy(selection) : null;
         if(refinedBy) {
             target.selector.refinedBy = refinedBy;
             target.type = selection.semanticType;
         }
+        */
 
         //finally return the generated annotation
         return Object.assign({
@@ -94,6 +247,7 @@ export default class AnnotationUtil {
         }
     */
 
+    /*
     static __generateRefinedBy = (selection : any) => {
         if(!selection) return null;
 
@@ -115,26 +269,20 @@ export default class AnnotationUtil {
         }
         return null;
     };
+    */
 
     //almost as important as being able to extract & construct an NPID.
     //TODO model selections in a class
     //TODO think about multi-target annotations; is it likely there will be multiple targets with selections?
-    static extractSelectionFromTarget = (target : any) => {
+    static extractSelectionFromTarget = (target : Target) => {
         //selections are ALWAYS inside the refinedBy part of the target's selector
-        if(!target || !target.selector || !target.selector.refinedBy) return null;
-
-        if(target.selector.refinedBy.start) {
-            return {
-                type : 'temporal',
-                start : target.selector.refinedBy.start,
-                end : target.selector.refinedBy.end
-            }
-        } else if(target.selector.refinedBy.rect) {
-            return {
-                type : 'spatial',
-                rect : target.selector.refinedBy.rect
-            }
-        } //TODO add text selection bit
+        if (!target || !target.selector) {
+            return null;
+        } else if (!target.selector.refinedBy) {
+            return target.selector;
+        } else {
+            return target.selector.refinedBy;
+        }
     };
 
     // get list of targets from an annotation, even if there is only one target
@@ -142,7 +290,7 @@ export default class AnnotationUtil {
         if (Array.isArray(annotation.target)) {
             return annotation.target;
         } else {
-            const targetList: Array<Target | string> = [];
+            const targetList: Array<Target> = [];
             targetList.push(annotation.target);
             return targetList;
         }
@@ -163,7 +311,7 @@ export default class AnnotationUtil {
         } else if (target.id) {
             return target.id;
         } else {
-            throw Error('Error: target object MUST have either an id or a source property');
+            throw Error("Error: target object MUST have either an id or a source property");
         }
     }
 
@@ -172,30 +320,14 @@ export default class AnnotationUtil {
     static extractNestedPIDTargetIds = (target: Target) => {
         // if there is a nested PID selector, return its list of IDs
         if (!target.selector || !(target.selector instanceof NestedPIDSelector)) {
-            throw Error('Error: target has no NestedPIDSelector')
+            throw Error("Error: target has no NestedPIDSelector")
         } 
         return target.selector.value.map(nestedTarget => {
-            if (nestedTarget.id) {
-                return nestedTarget.id;
-            } else {
-                throw Error('Nested PID target must have ')
-            }
+            return nestedTarget.id;
         });
     }
 
     /* --------------------------- MISC HELPER FUNCTIONS --------------------------- */
-
-    static getLevelOfSemanticType = (npidTemplate : any, semanticType? : string) => {
-        return npidTemplate.findIndex((pid : any) => pid.type.indexOf(semanticType) !== -1);
-    }
-
-    static getNPIDLength = (target : Target) => {
-        if (target.selector && target.selector instanceof NestedPIDSelector) {
-            return target.selector.value.length;
-        } else {
-            return -1;
-        }
-    }
 
     static hasNPID = (target : Target) => target.selector && target.selector instanceof NestedPIDSelector;
 

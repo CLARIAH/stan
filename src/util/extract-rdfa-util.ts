@@ -1,6 +1,6 @@
 import VocabularyRegistry from "../model/VocabularyRegistry";
 import DOMUtil from "./extract-dom-util";
-import Resource, { ResourceRegistry } from "../model/Resource";
+import Resource, { ResourceIndex, ResourceRegistry } from "../model/Resource";
 import StringUtil from "./extract-string-util";
 
 const stringUtil = new StringUtil();
@@ -38,6 +38,9 @@ enum RDFaAttributeType {
 export default class RDFaUtil {
     
     getRDFaAttributes (element: HTMLElement) {
+        if (!element.getAttribute) {
+            throw Error("element has no getAttribute function. Are you passing 'document'?");
+        }
         const rdfaProperties: RDFaProperties = {
             about: element.getAttribute(RDFaAttributeType.ABOUT), 
             resource: element.getAttribute(RDFaAttributeType.RESOURCE),
@@ -75,21 +78,80 @@ export default class RDFaUtil {
     }
 
     hasRDFaAttributes (element: HTMLElement) {
+        if (!element.hasAttribute) {
+            return false;
+        }
         return Object.keys(RDFaAttributeType).some(attr => {
             return element.hasAttribute(attr);
         })
     }
 
     hasRDFaResourceAttribute (element: HTMLElement) {
+        if (!element.hasAttribute) {
+            return false;
+        }
         return element.hasAttribute(RDFaAttributeType.RESOURCE) || element.hasAttribute(RDFaAttributeType.ABOUT);
     }
 
     hasRDFaTypeAttribute (element: HTMLElement) {
+        if (!element.hasAttribute) {
+            return false;
+        }
         return element.hasAttribute(RDFaAttributeType.TYPEOF);
     }
 
     hasRDFaPrefixAttribute (element: HTMLElement) {
+        if (!element.hasAttribute) {
+            return false;
+        }
         return element.hasAttribute(RDFaAttributeType.PREFIX);
+    }
+
+    getRDFaResourceAttribute (element: HTMLElement): string {
+        const resource = element.getAttribute(RDFaAttributeType.RESOURCE);
+        const about = element.getAttribute(RDFaAttributeType.ABOUT);
+        if (typeof resource === "string") {
+            return resource;
+        } else if (typeof about === "string") {
+            return about;
+        } else {
+            throw Error("this element has no RDFa 'resource' or 'about' attribute");
+        }
+    }
+
+    // for a given element, return the smallest RDFa resource that contains that element
+    getRDFaContainer (node: Node): Node | null {
+        // if element has RDFa attribute resource or about, it is the container
+        if (this.hasRDFaResourceAttribute(<HTMLElement>node)) {
+            return node;
+        } else if (node.nodeName === "BODY" || !node.parentNode) {
+            // if element is the body and it is not an RDFa resource, there is no container
+            // as the parent is document, which can't have RDFa attributes
+            return null;
+        } else {
+            // if the element is no RDFa resource and is descendant of body, check its parent
+            return this.getRDFaContainer(node.parentNode);
+        }
+    }
+
+    getRDFaTopLevelResources (rootNode: Node): Array<string> {
+        const topLevelResources: Array<string> = [];
+        const self = this;
+        if (self.hasRDFaResourceAttribute(<HTMLElement>rootNode)) {
+            const resourceId = self.getRDFaResourceAttribute(<HTMLElement>rootNode);
+            topLevelResources.push(resourceId);
+            return topLevelResources;
+        } else {
+            rootNode.childNodes.forEach(childNode => {
+                if (childNode.nodeType !== document.ELEMENT_NODE) {
+                    return null;
+                }
+                self.getRDFaTopLevelResources(childNode).forEach(topLevelResource => {
+                    topLevelResources.push(topLevelResource);
+                })
+            })
+            return topLevelResources;
+        }
     }
 
     makeEmptyContext() {
@@ -125,9 +187,9 @@ export default class RDFaUtil {
         element.style.cursor = "not-allowed";
     }
 
-    registerRDFaResources(rdfaRootNode: Node) {
+    registerRDFaResources(rdfaRootNode: Node): ResourceRegistry {
         const prefixDict: PrefixDict = {};
-        let parentResource: string = '';
+        let parentResource: any = null;
         let vocabulary: string = '';
         const context: Context = {
             parentResource: parentResource,
@@ -135,10 +197,12 @@ export default class RDFaUtil {
             vocabulary: vocabulary
         }
         const resourceList = this.parseRDFaResources(rdfaRootNode, context);
-        const resourceRegistry: ResourceRegistry = {};
+        const resourceIndex: ResourceIndex = {};
         resourceList.forEach(resource => {
-            resourceRegistry[resource.id] = resource;
+            resourceIndex[resource.id] = resource;
         });
+        const topLevelResources = this.getRDFaTopLevelResources(rdfaRootNode);
+        const resourceRegistry = new ResourceRegistry(topLevelResources, resourceIndex)
         return resourceRegistry;
     }
 

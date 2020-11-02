@@ -1,6 +1,7 @@
 import Annotation from "../model/Annotation";
 import API from "./API";
 import User from "../model/User";
+import { Query } from "../model/Query";
 import { ClientConfig } from "../model/ClientConfig";
 import { makeQueryString } from "../model/Query";
 
@@ -8,12 +9,9 @@ export default class AnnotationAPI extends API {
 
     static async saveAnnotation(annotation: Annotation, config: ClientConfig, user: User) {
         const query = makeQueryString({accessStatus: user.accessStatus});
-        let method = (annotation.id) ? "PUT" : "POST"; // if annotation already has id, save means update
-        let endpoint = "/annotations/";
-        if (annotation.id !== null) {
-            endpoint += annotation.id 
-        }
+        let endpoint = (annotation.id !== null) ? "/annotations/" + annotation.id : "/annotations/";
         const url = config.annotationServer.url + endpoint + query;
+        let method = (annotation.id) ? "PUT" : "POST"; // if annotation already has id, save means update
         const options = {
             method: method,
             body: JSON.stringify(annotation),
@@ -31,10 +29,8 @@ export default class AnnotationAPI extends API {
         }
     }
 
-    static async getAnnotations(config: ClientConfig, user: User) {
+    static async getAnnotations(url: string, config: ClientConfig, user: User) {
         // should always return an array
-        const query = makeQueryString({accessStatus: user.accessStatus});
-        const url = config.annotationServer.url + "/annotations/" + query;
         const options = {
             method: "GET",
             headers: {"Content-Type": "application/json"}
@@ -49,7 +45,6 @@ export default class AnnotationAPI extends API {
                 return annotations;
             }
         } else if (response.status === 403) {
-            // token expired
             throw Error("Token expired");
         } else {
             throw Error("Server responded unexpectedly");
@@ -79,24 +74,7 @@ export default class AnnotationAPI extends API {
     static async getAnnotationsByTarget(targetId: string, config: ClientConfig, user: User) {
         const query = makeQueryString({accessStatus: user.accessStatus, targetId: targetId});
         const url = config.annotationServer.url + "/annotations/" + query;
-        const options = {
-            method: "GET"
-        }
-        const response = await this.makeRequest(url, options, user)
-        if (response.status === 200) {
-            const annotation_container = await response.json();
-            if (annotation_container['total'] > 0) {
-                return annotation_container['first']['items'];
-            } else {
-                const annotations: Array<Annotation> = [];
-                return annotations;
-            }
-        } else if (response.status === 403) {
-            // token expired
-            throw Error("Token expired");
-        } else {
-            throw Error("Server responded unexpectedly");
-        }
+        return this.getAnnotations(url, config, user);
     }
 
     static async deleteAnnotation(annotationId: string, config: ClientConfig, user: User) {
@@ -106,8 +84,8 @@ export default class AnnotationAPI extends API {
         }
         const response = await this.makeRequest(url, options, user);
         if (response.status === 204) {
+            // delete successful, return the deleted annotation
             return response.json()
-            //return {status: 204, message: "annotation deleted", data: response.json()}
         } else if (response.status === 403) {
             throw Error("Not authorized to DELETE annotation with id: " + annotationId);
         } else if (response.status === 404) {

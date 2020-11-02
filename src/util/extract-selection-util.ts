@@ -1,15 +1,16 @@
 import DOMUtil from "./extract-dom-util";
+import {} from "../model/Selector"
 
 const domUtil = new DOMUtil();
 
-interface MouseSelection {
+export interface MouseSelection {
     startNode: Node,
     startOffset: number,
     endNode: Node,
     endOffset: number
 }
 
-interface TextSelection {
+export interface TextSelection {
     startNode: Node;
     startOffset: number;
     endNode: Node;
@@ -55,7 +56,7 @@ export default class SelectionUtil {
     }
     
     makeTextSelection (selection: MouseSelection) {
-        const containerNode = domUtil.getCommonAncestor(selection.startNode, selection.endNode);
+        const containerNode = domUtil.getContainerNode(selection.startNode, selection.endNode);
         if (!containerNode) {
             throw Error("Invalid text selection! startNode and endNode don't have a common ancestor");
         }

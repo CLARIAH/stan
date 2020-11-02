@@ -1,6 +1,10 @@
 import Annotation from './model/Annotation';
+import User from './model/User';
+import { AccessLevel } from './model/User';
 import TargetRegistry from './TargetRegistry';
-import {AnnotationUtil, ObjectUtil, IDUtil, AnnotationEvent} from './util/annotation-util';
+import AnnotationAPI from './api/AnnotationAPI';
+import AnnotationUtil from './util/annotation-util';
+import {ObjectUtil, IDUtil, AnnotationEvent} from './util/annotation-util';
 
 export default class Stan {
 
@@ -12,7 +16,15 @@ export default class Stan {
 	public activeSelection : any; //only one selection is active
 	public annotations : Array<any> = [];
 	public activeTemplate : any;
-	static instance : Stan;
+    static instance : Stan;
+    public user: User = { // be default, there is no user logged in, use public annotations
+        username: null,
+        password: null,
+        token: null,
+        userId: null,
+        accessStatus: [AccessLevel.PUBLIC]
+
+    };
 
 	//TODO add something for the target registry?
 	constructor(config: any, events: any) { //this part of the constructor should be replaced
@@ -128,48 +140,46 @@ export default class Stan {
     /* ------------------------- CRUD (REWIRE TO STAN) --------------------------------- */
 
 	save = (setActive : boolean = true, notify : boolean = true) : Promise<any> => {
-        return new Promise( (resolve : any) => {
+        return new Promise( async (resolve : any) => {
         	if(!this.activeAnnotation) {
 				alert('no active annotation, cannot save');
             	resolve(null);
         	}
-            AnnotationAPI.saveAnnotation(this.activeAnnotation, (data : any) => {
-                if(data == null) resolve(null);
-                //assign the annotation data returned from the server (which now has annotation IDs)
-                this.activeAnnotation = setActive ? data : null;
+            let data = await AnnotationAPI.saveAnnotation(this.activeAnnotation, this.config, this.user);
+            if(data == null) resolve(null);
+            //assign the annotation data returned from the server (which now has annotation IDs)
+            this.activeAnnotation = setActive ? data : null;
 
-                //add or update the annotation in the list
-                if(!this.annotations.find((a : any) => a.id === data.id)) {
-                    this.annotations.push(ObjectUtil.clone(data));
-                } else {
-                    this.annotations[
-                        this.annotations.findIndex((a : any) => a.id === data.id)
-                    ] = ObjectUtil.clone(data);
-                }
+            //add or update the annotation in the list
+            if(!this.annotations.find((a : any) => a.id === data.id)) {
+                this.annotations.push(ObjectUtil.clone(data));
+            } else {
+                this.annotations[
+                    this.annotations.findIndex((a : any) => a.id === data.id)
+                ] = ObjectUtil.clone(data);
+            }
 
-                if(notify) {
-                    this.events.trigger(AnnotationEvent.ON_SAVE, ObjectUtil.clone(data)); // also trigger all listeners
-                    //this.events.trigger(annotation.target.source, annotation); // TODO also trigger everyone listening to the media object
-                }
+            if(notify) {
+                this.events.trigger(AnnotationEvent.ON_SAVE, ObjectUtil.clone(data)); // also trigger all listeners
+                //this.events.trigger(annotation.target.source, annotation); // TODO also trigger everyone listening to the media object
+            }
 
-                resolve(this.activeAnnotation); // callback for the async function
-            });
-        })
+            resolve(this.activeAnnotation); // callback for the async function
+        });
 	};
 
     delete = (annotation : any, notify : boolean = true) : Promise<any> => {
-        return new Promise(resolve => {
-            AnnotationAPI.deleteAnnotation(annotation, (data : any, annotation : any) => {
-                if(data == null) resolve(null);
-                resolve(data);//,annotation
+        return new Promise(async resolve => {
+            let data = await AnnotationAPI.deleteAnnotation(annotation, this.config, this.user);
+            if(data == null) resolve(null);
+            resolve(data);//,annotation
 
-                this.annotations = this.annotations.filter((a : any) => a.id !== annotation.id);
-                this.activeAnnotation = null;
-                if(notify) {
-                    this.events.trigger(AnnotationEvent.ON_DELETE, annotation);
-                    //this.events.trigger(annotation.target.source, annotation);
-                }
-            });
+            this.annotations = this.annotations.filter((a : any) => a.id !== annotation.id);
+            this.activeAnnotation = null;
+            if(notify) {
+                this.events.trigger(AnnotationEvent.ON_DELETE, annotation);
+                //this.events.trigger(annotation.target.source, annotation);
+            }
         });
     };
 

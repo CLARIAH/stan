@@ -146,6 +146,59 @@ test("hasRDFaPrefix of element with prefix attribute returns true", () => {
     expect(rdfaUtil.hasRDFaPrefixAttribute(div)).toBe(true);
 });
 
+test("getRDFaContainer returns null if node has no RDFa container", () => {
+    const dom = generateRDFaDOM();
+    let rdfaContainer = rdfaUtil.getRDFaContainer(dom.window.document.body);
+    expect(rdfaContainer).toBe(null);
+})
+
+test("getRDFaContainer returns node if node is an RDFa resource", () => {
+    const dom = generateRDFaDOM();
+    const div = dom.window.document.getElementsByTagName('div')[1];
+    let rdfaContainer = rdfaUtil.getRDFaContainer(div);
+    expect(rdfaContainer).toBe(div);
+})
+
+test("getRDFaContainer returns parent if node has RDFa parent", () => {
+    const dom = generateRDFaDOM();
+    const p = dom.window.document.getElementsByTagName('p')[2];
+    const div = dom.window.document.getElementsByTagName('div')[1];
+    let rdfaContainer = rdfaUtil.getRDFaContainer(p);
+    expect(rdfaContainer).toBe(div);
+})
+
+test("getRDFaResourceAttribute returns a resource Id for an RDFa resource", () => {
+    const dom = generateRDFaDOM();
+    const div = dom.window.document.getElementsByTagName('div')[1];
+    const resourceId = rdfaUtil.getRDFaResourceAttribute(div);
+    expect(resourceId).not.toBe(null)
+})
+
+test("getRDFaResourceAttribute returns a resource Id for an RDFa resource", () => {
+    const dom = generateRDFaDOM();
+    const p = dom.window.document.getElementsByTagName('p')[1];
+    const resourceId = rdfaUtil.getRDFaResourceAttribute(p);
+    expect(resourceId).not.toBe(null)
+})
+
+test("getRDFaResourceAttribute throws an error if node has not RDFa resource attribute", () => {
+    const dom = generatePlainDOM();
+    const p = dom.window.document.getElementsByTagName('p')[0];
+    let error = null;
+    try {
+        rdfaUtil.getRDFaResourceAttribute(p);
+    } catch (err) {
+        error = err;
+    }
+    expect(error).not.toBe(null)
+})
+
+test("getRDFaRootResource returns a list of resource Ids for RDFa DOM", () => {
+    const dom = generateRDFaDOM();
+    const topLevelResources = rdfaUtil.getRDFaTopLevelResources(dom.window.document);
+    expect(topLevelResources.length).toBe(3)
+})
+
 test("isPrefixString returns false if prefixString does not end with colon", () => {
     expect(rdfaUtil.isPrefixString("tt")).toBe(false);
 });
@@ -552,21 +605,27 @@ test("registerRDFaResources always returns a registry when there are no RDFa res
     const rdfaRootNode = dom.window.document.body;
     const registry = rdfaUtil.registerRDFaResources(rdfaRootNode);
     expect(registry).not.toBe(null);
-    //expect(Object.keys(registry))
 })
 
 test("registerRDFaResources returns an empty registry when there are no RDFa resources", () => {
     const dom = generatePlainDOM();
     const rdfaRootNode = dom.window.document.body;
     const registry = rdfaUtil.registerRDFaResources(rdfaRootNode);
-    expect(Object.keys(registry).length).toBe(0);
+    expect(Object.keys(registry.index).length).toBe(0);
 })
 
-test("registerRDFaResources  returns an empty registry when passing a non-ELEMENT node", () => {
+test("registerRDFaResources returns an empty registry when passing a non-ELEMENT node", () => {
     const dom = generatePlainDOM();
     const rdfaRootNode = dom.window.document.body.childNodes[0];
     const registry = rdfaUtil.registerRDFaResources(rdfaRootNode);
-    expect(Object.keys(registry).length).toBe(0);
+    expect(Object.keys(registry.index).length).toBe(0);
+})
+
+test("registerRDFaResources returns an non-empty registry when passing a RDFa node", () => {
+    const dom = generateRDFaDOM();
+    const rdfaRootNode = dom.window.document.getElementsByTagName("div")[1];
+    const registry = rdfaUtil.registerRDFaResources(rdfaRootNode);
+    expect(Object.keys(registry.index).length).not.toBe(0);
 })
 
 /*
